@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import Link from "next/link";
 import { MediaItem } from "@/types/media";
 
@@ -37,10 +39,14 @@ export default function MediaCard({
       className="group block"
     >
       <div className="overflow-hidden rounded-xl bg-zinc-900">
-        <img
+        <Image
           src={item.cover}
           alt={item.title}
           className="aspect-[2/3] w-full object-cover transition duration-200 group-hover:scale-105"
+        
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(item.cover)}
         />
       </div>
 

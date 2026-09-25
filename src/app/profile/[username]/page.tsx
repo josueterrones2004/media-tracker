@@ -6,6 +6,7 @@ import {
 } from "next/navigation";
 
 import FollowButton from "@/app/social/FollowButton";
+import { FOLLOW_TABLE } from "@/lib/follows";
 import { createClient } from "@/lib/supabase/server";
 
 import CroppedProfileImage, {
@@ -144,8 +145,8 @@ export default async function PublicProfilePage({
         followError,
     } =
       await supabase
-        .from("follows")
-        .select("id")
+        .from(FOLLOW_TABLE)
+        .select("follower_id")
         .eq(
           "follower_id",
           user.id
@@ -177,7 +178,7 @@ export default async function PublicProfilePage({
   ] =
     await Promise.all([
       supabase
-        .from("follows")
+        .from(FOLLOW_TABLE)
         .select("*", {
           count: "exact",
           head: true,
@@ -188,7 +189,7 @@ export default async function PublicProfilePage({
         ),
 
       supabase
-        .from("follows")
+        .from(FOLLOW_TABLE)
         .select("*", {
           count: "exact",
           head: true,
@@ -242,6 +243,20 @@ export default async function PublicProfilePage({
         ),
     ]);
 
+  if (followersResult.error) {
+    console.error(
+      "Error loading followers count:",
+      followersResult.error
+    );
+  }
+
+  if (followingResult.error) {
+    console.error(
+      "Error loading following count:",
+      followingResult.error
+    );
+  }
+
   if (
     sectionsResult.error
   ) {
@@ -279,6 +294,9 @@ export default async function PublicProfilePage({
       favoritesResult.data ??
       []
     ) as ProfileFavoriteRow[];
+
+  const connectionsPath =
+    `/profile/${encodeURIComponent(username)}/connections`;
 
   return (
     <main className="pb-16">
@@ -388,24 +406,31 @@ export default async function PublicProfilePage({
             </p>
           )}
 
+          {/* SEGUIDORES / SIGUIENDO */}
           <div className="mt-5 flex flex-wrap gap-5 text-sm text-zinc-500">
-            <span>
+            <Link
+              href={`${connectionsPath}?tab=following`}
+              className="transition hover:text-zinc-200"
+            >
               <strong className="font-semibold text-zinc-200">
                 {
                   followingCount
                 }
               </strong>{" "}
               Siguiendo
-            </span>
+            </Link>
 
-            <span>
+            <Link
+              href={`${connectionsPath}?tab=followers`}
+              className="transition hover:text-zinc-200"
+            >
               <strong className="font-semibold text-zinc-200">
                 {
                   followersCount
                 }
               </strong>{" "}
               Seguidores
-            </span>
+            </Link>
           </div>
         </div>
       </ProfileMediaHeader>

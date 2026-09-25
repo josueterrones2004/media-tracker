@@ -1,7 +1,11 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { FOLLOW_TABLE } from "@/lib/follows";
 import { createClient } from "@/lib/supabase/server";
+import ActivityComments from "./ActivityComments";
 import ActivityLikeButton from "./ActivityLikeButton";
 import FollowButton from "./FollowButton";
 import SocialReviewModal from "./SocialReviewModal";
@@ -388,7 +392,7 @@ export default async function SocialPage({
     error: followError,
   } =
     await supabase
-      .from("follows")
+      .from(FOLLOW_TABLE)
       .select(
         "following_id"
       )
@@ -839,12 +843,19 @@ export default async function SocialPage({
                           className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-zinc-800"
                         >
                           {profile?.avatar_url ? (
-                            <img
+                            <Image
                               src={
                                 profile.avatar_url
                               }
                               alt={
                                 displayName
+                              }
+                              width={256}
+                              height={256}
+                              unoptimized={
+                                shouldUseOriginalImage(
+                                  profile.avatar_url
+                                )
                               }
                               className="h-full w-full object-cover"
                             />
@@ -973,23 +984,37 @@ export default async function SocialPage({
                                   }
                                   className="w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-800"
                                 >
-                                  <img
+                                  <Image
                                     src={
                                       activity.cover_url
                                     }
                                     alt={
                                       activity.title
                                     }
+                                    width={500}
+                                    height={750}
+                                    unoptimized={
+                                      shouldUseOriginalImage(
+                                        activity.cover_url
+                                      )
+                                    }
                                     className="aspect-[2/3] w-full object-cover"
                                   />
                                 </Link>
                               ) : (
-                                <img
+                                <Image
                                   src={
                                     activity.cover_url
                                   }
                                   alt={
                                     activity.title
+                                  }
+                                  width={500}
+                                  height={750}
+                                  unoptimized={
+                                    shouldUseOriginalImage(
+                                      activity.cover_url
+                                    )
                                   }
                                   className="aspect-[2/3] w-16 shrink-0 rounded-lg object-cover"
                                 />
@@ -1042,6 +1067,16 @@ export default async function SocialPage({
                           }
                           initialCount={
                             likeCount
+                          }
+                        />
+
+                        {/* COMENTARIOS */}
+                        <ActivityComments
+                          activityId={
+                            activity.id
+                          }
+                          currentUserId={
+                            user.id
                           }
                         />
                       </div>
@@ -1134,12 +1169,19 @@ export default async function SocialPage({
                         >
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-zinc-800">
                             {profile.avatar_url ? (
-                              <img
+                              <Image
                                 src={
                                   profile.avatar_url
                                 }
                                 alt={
                                   displayName
+                                }
+                                width={256}
+                                height={256}
+                                unoptimized={
+                                  shouldUseOriginalImage(
+                                    profile.avatar_url
+                                  )
                                 }
                                 className="h-full w-full object-cover"
                               />
@@ -1197,12 +1239,19 @@ export default async function SocialPage({
                         <div className="flex min-w-0 flex-1 items-center gap-4">
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-zinc-800">
                             {profile.avatar_url ? (
-                              <img
+                              <Image
                                 src={
                                   profile.avatar_url
                                 }
                                 alt={
                                   displayName
+                                }
+                                width={256}
+                                height={256}
+                                unoptimized={
+                                  shouldUseOriginalImage(
+                                    profile.avatar_url
+                                  )
                                 }
                                 className="h-full w-full object-cover"
                               />

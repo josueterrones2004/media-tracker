@@ -1,5 +1,8 @@
 "use client";
 
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
+
 import {
   Heart,
   HeartCrack,
@@ -153,13 +156,17 @@ export default function SocialReviewModal({
       >
         {review.cover_url ? (
           <div className="w-16 shrink-0 overflow-hidden rounded-lg">
-            <img
+            <Image
               src={
                 review.cover_url
               }
               alt={review.title}
               className="aspect-[2/3] w-full object-cover"
-            />
+            
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(review.cover_url)}
+        />
           </div>
         ) : (
           <div className="flex aspect-[2/3] w-16 shrink-0 items-center justify-center rounded-lg bg-zinc-800 px-2 text-center text-[10px] text-zinc-500">
@@ -244,7 +251,7 @@ export default function SocialReviewModal({
               {/* PORTADA */}
               <div>
                 {review.cover_url ? (
-                  <img
+                  <Image
                     src={
                       review.cover_url
                     }
@@ -252,7 +259,11 @@ export default function SocialReviewModal({
                       review.title
                     }
                     className="w-full rounded-xl object-cover shadow-xl"
-                  />
+                  
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(review.cover_url)}
+        />
                 ) : (
                   <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-sm text-zinc-600">
                     Sin portada

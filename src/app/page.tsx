@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -120,11 +122,15 @@ export default async function HomePage() {
               >
                 <div className="overflow-hidden rounded-xl bg-zinc-900">
                   {item.cover_url ? (
-                    <img
+                    <Image
                       src={item.cover_url}
                       alt={item.title}
                       className="aspect-[2/3] w-full object-cover transition duration-200 group-hover:scale-105"
-                    />
+                    
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(item.cover_url)}
+        />
                   ) : (
                     <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 text-zinc-500">
                       Sin imagen
@@ -169,11 +175,15 @@ export default async function HomePage() {
               >
                 <div className="overflow-hidden rounded-xl bg-zinc-900">
                   {item.cover_url ? (
-                    <img
+                    <Image
                       src={item.cover_url}
                       alt={item.title}
                       className="aspect-[2/3] w-full object-cover transition duration-200 group-hover:scale-105"
-                    />
+                    
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(item.cover_url)}
+        />
                   ) : (
                     <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 text-zinc-500">
                       Sin imagen

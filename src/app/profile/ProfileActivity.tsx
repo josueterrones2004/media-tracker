@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import Link from "next/link";
 
 import {
@@ -523,13 +525,17 @@ export default async function ProfileActivity({
                     className="block overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
                   >
                     {cover ? (
-                      <img
+                      <Image
                         src={cover}
                         alt={
                           activity.title
                         }
                         className="aspect-[2/3] w-full object-cover"
-                      />
+                      
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(cover)}
+        />
                     ) : (
                       <div className="flex aspect-[2/3] items-center justify-center px-4 text-center text-xs text-zinc-600">
                         Sin portada
@@ -619,13 +625,17 @@ export default async function ProfileActivity({
                 className="w-[85px] shrink-0 overflow-hidden rounded-lg border border-zinc-800 transition hover:border-zinc-600"
               >
                 {cover ? (
-                  <img
+                  <Image
                     src={cover}
                     alt={
                       activity.title
                     }
                     className="aspect-[2/3] w-full object-cover"
-                  />
+                  
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(cover)}
+        />
                 ) : (
                   <div className="flex aspect-[2/3] items-center justify-center px-2 text-center text-xs text-zinc-600">
                     Sin portada

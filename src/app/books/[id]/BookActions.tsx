@@ -1,5 +1,8 @@
 "use client";
 
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
+
 import {
   useEffect,
   useState,
@@ -721,7 +724,7 @@ export default function BookActions({
               <div className="flex justify-center md:justify-start md:pt-16">
                 <div className="w-full max-w-[180px]">
                   {book.coverUrl ? (
-                    <img
+                    <Image
                       src={
                         book.coverUrl
                       }
@@ -729,7 +732,11 @@ export default function BookActions({
                         book.title
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
-                    />
+                    
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(book.coverUrl)}
+        />
                   ) : (
                     <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
                       Sin imagen

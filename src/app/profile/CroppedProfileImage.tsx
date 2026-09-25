@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 export type ProfileCrop = {
   x: number;
   y: number;
@@ -43,11 +45,15 @@ export default function CroppedProfileImage({
 }: CroppedProfileImageProps) {
   if (!isValidCrop(crop)) {
     return (
-      <img
+      <Image
         src={src}
         alt={alt}
         className={`h-full w-full object-cover ${className}`}
-      />
+      
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(src)}
+        />
     );
   }
 
@@ -78,7 +84,7 @@ export default function CroppedProfileImage({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <img
+      <Image
         src={src}
         alt={alt}
         className={`absolute max-w-none ${className}`}
@@ -88,7 +94,11 @@ export default function CroppedProfileImage({
           left: `${left}%`,
           top: `${top}%`,
         }}
-      />
+      
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(src)}
+        />
     </div>
   );
 }

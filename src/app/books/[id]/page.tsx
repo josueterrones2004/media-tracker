@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import {
   getAuthorDetails,
   getBookDescription,
@@ -72,11 +74,15 @@ export default async function BookPage({
         {/* PORTADA */}
         <div className="self-start shrink-0">
           {cover ? (
-            <img
+            <Image
               src={cover}
               alt={book.title}
               className="aspect-[2/3] w-full max-w-[260px] rounded-2xl object-cover shadow-2xl"
-            />
+            
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(cover)}
+        />
           ) : (
             <div className="flex aspect-[2/3] w-full max-w-[260px] items-center justify-center rounded-2xl bg-zinc-900 px-5 text-center text-zinc-500">
               Sin imagen

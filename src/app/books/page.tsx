@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -310,7 +312,7 @@ function BookLibraryCard({
     >
       <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition-colors duration-200 group-hover:border-zinc-400">
         {book.cover_url ? (
-          <img
+          <Image
             src={
               book.cover_url
             }
@@ -318,7 +320,11 @@ function BookLibraryCard({
               book.title
             }
             className="aspect-[2/3] w-full object-cover"
-          />
+          
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(book.cover_url)}
+        />
         ) : (
           <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
             Sin imagen

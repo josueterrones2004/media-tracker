@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Settings2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { FOLLOW_TABLE } from "@/lib/follows";
 import { createClient } from "@/lib/supabase/server";
 
 import CroppedProfileImage, {
@@ -133,7 +134,7 @@ export default async function ProfilePage() {
       ),
 
     supabase
-      .from("profile_follows")
+      .from(FOLLOW_TABLE)
       .select(
         "follower_id",
         {
@@ -147,7 +148,7 @@ export default async function ProfilePage() {
       ),
 
     supabase
-      .from("profile_follows")
+      .from(FOLLOW_TABLE)
       .select(
         "following_id",
         {

@@ -1,5 +1,8 @@
 "use client";
 
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
+
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -319,11 +322,15 @@ export default function ReviewModalCard({
                       }
                       className="block"
                     >
-                      <img
+                      <Image
                         src={review.cover_url}
                         alt={review.title}
                         className="w-full rounded-xl border border-transparent object-cover shadow-xl transition-colors duration-200 hover:border-zinc-400"
-                      />
+                      
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(review.cover_url)}
+        />
                     </Link>
                   ) : (
                     <Link
@@ -661,10 +668,14 @@ function SeriesCover({
   return (
     <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition-colors duration-200 hover:border-zinc-400">
       {coverUrl ? (
-        <img
+        <Image
           src={coverUrl}
           alt={title}
           className="aspect-[2/3] w-full object-cover"
+        
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(coverUrl)}
         />
       ) : (
         <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">

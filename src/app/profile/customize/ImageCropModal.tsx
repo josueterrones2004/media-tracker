@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -63,8 +64,7 @@ export default function ImageCropModal({
   const handleCropComplete =
     useCallback(
       (
-        areaPercentages: Area,
-        _areaPixels: Area
+        areaPercentages: Area
       ) => {
         setCroppedAreaPercentages(
           areaPercentages
@@ -95,10 +95,8 @@ export default function ImageCropModal({
     });
   }
 
-  /*
-   * Avatar cuadrado.
-   * Banner 3:1 como X/Twitter.
-   */
+  /* IMAGE ASPECT RATIO */
+
   const aspect =
     type === "avatar"
       ? 1
@@ -116,9 +114,8 @@ export default function ImageCropModal({
             </h2>
 
             <p className="mt-1 text-sm text-zinc-500">
-              Arrastra la imagen y
-              ajusta el zoom hasta que
-              quede como quieres.
+              Arrastra la imagen y ajusta el zoom
+              hasta que quede como quieres.
             </p>
           </div>
 
@@ -171,12 +168,12 @@ export default function ImageCropModal({
               ) =>
                 setZoom(
                   Number(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 )
               }
               className="w-full accent-fuchsia-500"
+              aria-label="Zoom"
             />
 
             <Plus
@@ -197,7 +194,8 @@ export default function ImageCropModal({
             <button
               type="button"
               onClick={applyCrop}
-              className="flex items-center gap-2 rounded-xl bg-fuchsia-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-fuchsia-400"
+              disabled={!croppedAreaPercentages}
+              className="flex items-center gap-2 rounded-xl bg-fuchsia-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
             >
               <Check size={16} />
 

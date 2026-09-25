@@ -1,5 +1,8 @@
 "use client";
 
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
+
 import {
   useEffect,
   useState,
@@ -801,7 +804,7 @@ export default function MovieActions({
               <div className="flex justify-center md:justify-start md:pt-16">
                 <div className="w-full max-w-[180px]">
                   {poster ? (
-                    <img
+                    <Image
                       src={
                         poster
                       }
@@ -809,7 +812,11 @@ export default function MovieActions({
                         movie.title
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
-                    />
+                    
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(poster)}
+        />
                   ) : (
                     <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
                       Sin imagen

@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import { getMovieDetails } from "@/lib/tmdb";
 import MovieActions from "./MovieActions";
 
@@ -27,11 +29,15 @@ export default async function MoviePage({
       {/* Banner */}
       <div className="relative h-[360px] overflow-hidden rounded-2xl bg-zinc-900">
         {backdrop && (
-          <img
+          <Image
             src={backdrop}
             alt=""
             className="h-full w-full object-cover"
-          />
+          
+          width={1280}
+          height={720}
+          unoptimized={shouldUseOriginalImage(backdrop)}
+        />
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
@@ -43,11 +49,15 @@ export default async function MoviePage({
 
           <div className="shrink-0">
             {poster ? (
-              <img
+              <Image
                 src={poster}
                 alt={movie.title}
                 className="w-56 rounded-xl border-4 border-zinc-950 object-cover shadow-2xl"
-              />
+              
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(poster)}
+        />
             ) : (
               <div className="flex aspect-[2/3] w-56 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500">
                 Sin imagen

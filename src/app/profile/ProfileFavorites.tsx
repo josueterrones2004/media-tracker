@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import Link from "next/link";
 
 type MediaType =
@@ -83,7 +85,7 @@ export default function ProfileFavorites({
           >
             <div className="aspect-[2/3] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
               {favorite.cover_url ? (
-                <img
+                <Image
                   src={
                     favorite.cover_url
                   }
@@ -91,7 +93,11 @@ export default function ProfileFavorites({
                     favorite.title
                   }
                   className="h-full w-full object-cover"
-                />
+                
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(favorite.cover_url)}
+        />
               ) : (
                 <div className="flex h-full w-full items-center justify-center px-4 text-center text-sm text-zinc-600">
                   Sin portada

@@ -1,6 +1,10 @@
 "use client";
 
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
+
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -235,6 +239,55 @@ export default function SeriesActions({
     supabase,
   ]);
 
+  const openWatchedModal = useCallback(async () => {
+    setMessage("");
+
+    const {
+      data: { user },
+    } =
+      await supabase.auth.getUser();
+
+    if (!user) {
+      setMessage(
+        "Debes iniciar sesión."
+      );
+
+      return;
+    }
+
+    const {
+      data: previousReviews,
+    } =
+      await supabase
+        .from("reviews")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("media_type", "SERIES")
+        .eq(
+          "external_id",
+          String(show.id)
+        )
+        .limit(1);
+
+    setIsRewatch(
+      Boolean(
+        previousReviews &&
+          previousReviews.length >
+            0
+      )
+    );
+
+    setWatchedDate(
+      getToday()
+    );
+
+    setLiked(true);
+    setContainsSpoilers(false);
+    setShowDate(true);
+    setReview("");
+    setShowReview(true);
+  }, [show.id, supabase]);
+
   useEffect(() => {
     function handleSeriesCompleted(
       event: Event
@@ -265,7 +318,7 @@ export default function SeriesActions({
         handleSeriesCompleted
       );
     };
-  }, [show.id]);
+  }, [show.id, openWatchedModal]);
 
   function getSeriesData(
     userId: string
@@ -404,54 +457,6 @@ export default function SeriesActions({
     setLoading(false);
   }
 
-  async function openWatchedModal() {
-    setMessage("");
-
-    const {
-      data: { user },
-    } =
-      await supabase.auth.getUser();
-
-    if (!user) {
-      setMessage(
-        "Debes iniciar sesión."
-      );
-
-      return;
-    }
-
-    const {
-      data: previousReviews,
-    } =
-      await supabase
-        .from("reviews")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("media_type", "SERIES")
-        .eq(
-          "external_id",
-          String(show.id)
-        )
-        .limit(1);
-
-    setIsRewatch(
-      Boolean(
-        previousReviews &&
-          previousReviews.length >
-            0
-      )
-    );
-
-    setWatchedDate(
-      getToday()
-    );
-
-    setLiked(true);
-    setContainsSpoilers(false);
-    setShowDate(true);
-    setReview("");
-    setShowReview(true);
-  }
 
   async function saveReview() {
     setMessage("");
@@ -717,13 +722,17 @@ export default function SeriesActions({
               <div className="flex justify-center md:justify-start md:pt-16">
                 <div className="w-full max-w-[180px]">
                   {poster ? (
-                    <img
+                    <Image
                       src={poster}
                       alt={
                         show.name
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
-                    />
+                    
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(poster)}
+        />
                   ) : (
                     <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
                       Sin imagen

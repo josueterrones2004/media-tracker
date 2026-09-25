@@ -1,3 +1,5 @@
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import Image from "next/image";
 import { getSeriesDetails } from "@/lib/tmdb";
 
 import SeriesActions from "./SeriesActions";
@@ -69,11 +71,15 @@ export default async function SeriesDetailsPage({
       {/* BANNER */}
       {backdrop && (
         <div className="relative -mx-8 -mt-8 h-[290px] overflow-hidden lg:-mx-10">
-          <img
+          <Image
             src={backdrop}
             alt=""
             className="h-full w-full object-cover"
-          />
+          
+          width={1280}
+          height={720}
+          unoptimized={shouldUseOriginalImage(backdrop)}
+        />
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black" />
         </div>
@@ -90,11 +96,15 @@ export default async function SeriesDetailsPage({
         {/* PORTADA */}
         <div className="self-start shrink-0">
           {poster ? (
-            <img
+            <Image
               src={poster}
               alt={show.name}
               className="aspect-[2/3] w-full max-w-[260px] rounded-2xl object-cover shadow-2xl"
-            />
+            
+          width={500}
+          height={750}
+          unoptimized={shouldUseOriginalImage(poster)}
+        />
           ) : (
             <div className="flex aspect-[2/3] w-full max-w-[260px] items-center justify-center rounded-2xl bg-zinc-900 text-zinc-500">
               Sin imagen
