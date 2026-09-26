@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import ProfileDetailsEditor from "./ProfileDetailsEditor";
 import ProfileFavoritesEditor from "./ProfileFavoritesEditor";
 import ProfileSectionsEditor from "./ProfileSectionsEditor";
-import UsernameEditor from "./UsernameEditor";
 
 type SectionKey =
   | "ACTIVITY"
@@ -130,7 +129,8 @@ export default async function CustomizeProfilePage() {
   ];
 
   const sections =
-    sectionsResult.data && sectionsResult.data.length > 0
+    sectionsResult.data &&
+    sectionsResult.data.length > 0
       ? (sectionsResult.data as SectionRow[])
       : defaultSections;
 
@@ -146,15 +146,6 @@ export default async function CustomizeProfilePage() {
         </p>
       </div>
 
-      {/* USERNAME */}
-
-      <section className="mt-10">
-        <UsernameEditor
-          userId={user.id}
-          initialUsername={profile.username}
-        />
-      </section>
-
       {/* PROFILE */}
 
       <section className="mt-10">
@@ -163,7 +154,7 @@ export default async function CustomizeProfilePage() {
         </h2>
 
         <p className="mt-2 text-sm text-zinc-500">
-          Personaliza tu foto, banner, nombre y biografía.
+          Personaliza tu foto, banner, nombre de usuario y biografía.
         </p>
 
         <div className="mt-5">
