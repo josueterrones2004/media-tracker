@@ -1,284 +1,381 @@
 "use client";
 
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
 import Image from "next/image";
+
+import {
+  BookOpen,
+  Heart,
+  Repeat2,
+  ShieldAlert,
+} from "lucide-react";
 
 import {
   useEffect,
   useState,
 } from "react";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  useRouter,
+} from "next/navigation";
+
+import MediaActionBar from "@/components/media/MediaActionBar";
+import StarRating from "@/components/media/StarRating";
+
+import {
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 interface BookActionsProps {
   book: {
     id: string;
     title: string;
-    coverUrl: string | null;
-    authors: string[];
+
+    coverUrl:
+      | string
+      | null;
+
+    authors:
+      string[];
   };
 }
 
+type BookStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "DROPPED";
+
+function isBookStatus(
+  value:
+    string
+): value is BookStatus {
+  return (
+    value ===
+      "PENDING" ||
+    value ===
+      "IN_PROGRESS" ||
+    value ===
+      "DROPPED"
+  );
+}
+
 function getToday() {
-  const now = new Date();
+  const now =
+    new Date();
 
-  const local = new Date(
-    now.getTime() -
-      now.getTimezoneOffset() * 60_000
-  );
+  const local =
+    new Date(
+      now.getTime() -
+        now.getTimezoneOffset() *
+          60_000
+    );
 
-  return local.toISOString().slice(0, 10);
+  return local
+    .toISOString()
+    .slice(
+      0,
+      10
+    );
 }
 
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(
-    new Date(`${date}T12:00:00`)
-  );
-}
+function formatDate(
+  date:
+    string
+) {
+  return new Intl.DateTimeFormat(
+    "es-MX",
+    {
+      day:
+        "numeric",
 
-function ReadToggleIcon({
-  reread,
-}: {
-  reread: boolean;
-}) {
-  return (
-    <svg
-      width="40"
-      height="40"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />
-      <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5Z" />
+      month:
+        "short",
 
-      <path
-        d="M6 6 18 18"
-        pathLength="1"
-        style={{
-          strokeDasharray: 1,
-          strokeDashoffset:
-            reread ? 1 : 0,
-          transition:
-            "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
-        }}
-      />
-    </svg>
-  );
-}
-
-function SpoilerToggleIcon({
-  active,
-}: {
-  active: boolean;
-}) {
-  return (
-    <svg
-      width="40"
-      height="40"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" />
-
-      <path
-        d="m8.5 12 2.2 2.2 4.8-5"
-        pathLength="1"
-        style={{
-          opacity: active ? 0 : 1,
-          strokeDasharray: 1,
-          strokeDashoffset:
-            active ? 1 : 0,
-          transform: active
-            ? "scale(.7)"
-            : "scale(1)",
-          transformOrigin: "center",
-          transition:
-            "opacity 200ms ease, stroke-dashoffset 300ms ease, transform 250ms ease",
-        }}
-      />
-
-      <g
-        style={{
-          opacity: active ? 1 : 0,
-          transform: active
-            ? "scale(1)"
-            : "scale(.7)",
-          transformOrigin: "center",
-          transition:
-            "opacity 200ms ease, transform 250ms ease",
-        }}
-      >
-        <path d="M12 8v5" />
-        <path d="M12 16.4h.01" />
-      </g>
-    </svg>
-  );
-}
-
-function HeartToggleIcon({
-  liked,
-}: {
-  liked: boolean;
-}) {
-  return (
-    <svg
-      width="42"
-      height="42"
-      viewBox="0 0 24 24"
-      fill={
-        liked
-          ? "currentColor"
-          : "none"
-      }
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
-
-      <path
-        d="m13 6.5-2 4 2 2-2.2 4"
-        pathLength="1"
-        fill="none"
-        style={{
-          strokeDasharray: 1,
-          strokeDashoffset:
-            liked ? 1 : 0,
-          transition:
-            "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
-        }}
-      />
-    </svg>
+      year:
+        "numeric",
+    }
+  ).format(
+    new Date(
+      `${date}T12:00:00`
+    )
   );
 }
 
 export default function BookActions({
   book,
 }: BookActionsProps) {
-  const [supabase] = useState(() =>
-    createClient()
-  );
+  const router =
+    useRouter();
 
-  const [status, setStatus] = useState<
-    | "PENDING"
-    | "IN_PROGRESS"
-    | "DROPPED"
-    | null
-  >(null);
+  const [
+    supabase,
+  ] =
+    useState(
+      () =>
+        createClient()
+    );
 
-  const [showReview, setShowReview] =
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<
+      BookStatus |
+      null
+    >(null);
+
+  const [
+    hasReadBefore,
+    setHasReadBefore,
+  ] =
     useState(false);
 
-  const [loading, setLoading] =
+  const [
+    showReview,
+    setShowReview,
+  ] =
     useState(false);
 
-  const [review, setReview] =
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(false);
+
+  const [
+    review,
+    setReview,
+  ] =
     useState("");
 
-  const [liked, setLiked] =
+  const [
+    rating,
+    setRating,
+  ] =
+    useState<
+      number |
+      null
+    >(null);
+
+  const [
+    liked,
+    setLiked,
+  ] =
     useState(true);
 
-  const [isReread, setIsReread] =
+  const [
+    isReread,
+    setIsReread,
+  ] =
     useState(false);
 
   const [
     containsSpoilers,
     setContainsSpoilers,
-  ] = useState(false);
-
-  const [showDate, setShowDate] =
-    useState(true);
+  ] =
+    useState(false);
 
   const [
     readDate,
     setReadDate,
-  ] = useState(getToday());
+  ] =
+    useState(
+      getToday()
+    );
 
-  const [message, setMessage] =
+  const [
+    message,
+    setMessage,
+  ] =
     useState("");
 
   useEffect(() => {
-    async function loadState() {
-      const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
+    let cancelled =
+      false;
 
-      if (!user) return;
+    const timeout =
+      window.setTimeout(
+        () => {
+          void (async () => {
+            const {
+              data: {
+                user,
+              },
+            } =
+              await supabase.auth.getUser();
 
-      const { data } =
-        await supabase
-          .from("library_items")
-          .select("status")
-          .eq("user_id", user.id)
-          .eq("media_type", "BOOK")
-          .eq(
-            "external_id",
-            book.id
-          )
-          .maybeSingle();
+            if (
+              !user ||
+              cancelled
+            ) {
+              return;
+            }
 
-      if (
-        data?.status === "PENDING" ||
-        data?.status === "IN_PROGRESS" ||
-        data?.status === "DROPPED"
-      ) {
-        setStatus(data.status);
-      } else {
-        setStatus(null);
-      }
-    }
+            const [
+              libraryResult,
+              reviewResult,
+            ] =
+              await Promise.all([
+                supabase
+                  .from(
+                    "library_items"
+                  )
+                  .select(
+                    "status"
+                  )
+                  .eq(
+                    "user_id",
+                    user.id
+                  )
+                  .eq(
+                    "media_type",
+                    "BOOK"
+                  )
+                  .eq(
+                    "external_id",
+                    book.id
+                  )
+                  .maybeSingle(),
 
-    loadState();
+                supabase
+                  .from(
+                    "reviews"
+                  )
+                  .select(
+                    "id"
+                  )
+                  .eq(
+                    "user_id",
+                    user.id
+                  )
+                  .eq(
+                    "media_type",
+                    "BOOK"
+                  )
+                  .eq(
+                    "external_id",
+                    book.id
+                  )
+                  .limit(1),
+              ]);
+
+            if (
+              libraryResult.error
+            ) {
+              console.error(
+                "Error loading book state:",
+                libraryResult.error
+              );
+            }
+
+            if (
+              reviewResult.error
+            ) {
+              console.error(
+                "Error loading book reviews:",
+                reviewResult.error
+              );
+            }
+
+            if (
+              cancelled
+            ) {
+              return;
+            }
+
+            const loadedStatus =
+              libraryResult
+                .data
+                ?.status;
+
+            setStatus(
+              loadedStatus ===
+                  "PENDING" ||
+                loadedStatus ===
+                  "IN_PROGRESS" ||
+                loadedStatus ===
+                  "DROPPED"
+                ? loadedStatus
+                : null
+            );
+
+            setHasReadBefore(
+              Boolean(
+                reviewResult
+                  .data
+                  ?.length
+              )
+            );
+          })();
+        },
+        0
+      );
+
+    return () => {
+      cancelled =
+        true;
+
+      window.clearTimeout(
+        timeout
+      );
+    };
   }, [
     book.id,
     supabase,
   ]);
 
   function getBookData(
-    userId: string
+    userId:
+      string
   ) {
     return {
-      user_id: userId,
-      media_type: "BOOK",
-      external_id: book.id,
-      title: book.title,
+      user_id:
+        userId,
 
-      original_title: null,
+      media_type:
+        "BOOK",
+
+      external_id:
+        book.id,
+
+      title:
+        book.title,
+
+      original_title:
+        null,
 
       cover_url:
         book.coverUrl,
 
-      backdrop_url: null,
+      backdrop_url:
+        null,
 
-      release_year: null,
+      release_year:
+        null,
     };
   }
 
   async function createLibraryActivity(
-    userId: string,
+    userId:
+      string,
+
     activityType:
       | "STARTED"
       | "ADDED_PENDING"
   ) {
-    const { error } =
+    const {
+      error,
+    } =
       await supabase
-        .from("activity_events")
+        .from(
+          "activity_events"
+        )
         .insert({
-          user_id: userId,
+          user_id:
+            userId,
 
           activity_type:
             activityType,
@@ -306,15 +403,20 @@ export default function BookActions({
 
   async function setLibraryStatus(
     newStatus:
-      | "PENDING"
-      | "IN_PROGRESS"
-      | "DROPPED"
+      | BookStatus
+      | null
   ) {
+    if (loading) {
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     const {
-      data: { user },
+      data: {
+        user,
+      },
     } =
       await supabase.auth.getUser();
 
@@ -324,12 +426,65 @@ export default function BookActions({
       );
 
       setLoading(false);
+
       return;
     }
 
-    const { error } =
+    if (
+      newStatus ===
+      null
+    ) {
+      const {
+        error,
+      } =
+        await supabase
+          .from(
+            "library_items"
+          )
+          .delete()
+          .eq(
+            "user_id",
+            user.id
+          )
+          .eq(
+            "media_type",
+            "BOOK"
+          )
+          .eq(
+            "external_id",
+            book.id
+          );
+
+      if (error) {
+        setMessage(
+          error.message
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      setStatus(null);
+
+      setMessage(
+        "Libro quitado de tu biblioteca."
+      );
+
+      setLoading(false);
+
+      router.refresh();
+
+      return;
+    }
+
+    const {
+      error,
+    } =
       await supabase
-        .from("library_items")
+        .from(
+          "library_items"
+        )
         .upsert(
           {
             ...getBookData(
@@ -351,6 +506,7 @@ export default function BookActions({
       );
 
       setLoading(false);
+
       return;
     }
 
@@ -406,13 +562,17 @@ export default function BookActions({
     }
 
     setLoading(false);
+
+    router.refresh();
   }
 
   async function openReadModal() {
     setMessage("");
 
     const {
-      data: { user },
+      data: {
+        user,
+      },
     } =
       await supabase.auth.getUser();
 
@@ -427,23 +587,41 @@ export default function BookActions({
     const {
       data:
         previousReviews,
+
+      error,
     } =
       await supabase
-        .from("reviews")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("media_type", "BOOK")
+        .from(
+          "reviews"
+        )
+        .select(
+          "id"
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .eq(
+          "media_type",
+          "BOOK"
+        )
         .eq(
           "external_id",
           book.id
         )
         .limit(1);
 
+    if (error) {
+      console.error(
+        "Error checking previous book reviews:",
+        error
+      );
+    }
+
     setIsReread(
       Boolean(
-        previousReviews &&
-          previousReviews.length >
-            0
+        previousReviews
+          ?.length
       )
     );
 
@@ -451,27 +629,36 @@ export default function BookActions({
       getToday()
     );
 
+    setRating(null);
+
     setLiked(true);
-    setContainsSpoilers(false);
-    setShowDate(true);
+
+    setContainsSpoilers(
+      false
+    );
+
     setReview("");
-    setShowReview(true);
+
+    setShowReview(
+      true
+    );
   }
 
   async function saveReview() {
-    if (!review.trim()) {
-      setMessage(
-        "La review es obligatoria."
-      );
-
+    if (loading) {
       return;
     }
 
     setLoading(true);
     setMessage("");
 
+    const cleanReview =
+      review.trim();
+
     const {
-      data: { user },
+      data: {
+        user,
+      },
     } =
       await supabase.auth.getUser();
 
@@ -481,15 +668,21 @@ export default function BookActions({
       );
 
       setLoading(false);
+
       return;
     }
 
     const {
-      data: createdReview,
-      error: reviewError,
+      data:
+        createdReview,
+
+      error:
+        reviewError,
     } =
       await supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .insert({
           user_id:
             user.id,
@@ -504,7 +697,10 @@ export default function BookActions({
             book.title,
 
           review_text:
-            review.trim(),
+            cleanReview ||
+            null,
+
+          rating,
 
           liked,
 
@@ -515,7 +711,7 @@ export default function BookActions({
             containsSpoilers,
 
           show_consumed_date:
-            showDate,
+            true,
 
           experience:
             isReread
@@ -534,24 +730,34 @@ export default function BookActions({
           release_year:
             null,
         })
-        .select("id")
+        .select(
+          "id"
+        )
         .single();
 
-    if (reviewError) {
+    if (
+      reviewError
+    ) {
       setMessage(
         reviewError.message
       );
 
       setLoading(false);
+
       return;
     }
 
-    if (createdReview) {
+    if (
+      createdReview
+    ) {
       const {
-        error: activityError,
+        error:
+          activityError,
       } =
         await supabase
-          .from("activity_events")
+          .from(
+            "activity_events"
+          )
           .insert({
             user_id:
               user.id,
@@ -575,7 +781,9 @@ export default function BookActions({
               createdReview.id,
           });
 
-      if (activityError) {
+      if (
+        activityError
+      ) {
         console.error(
           "Error creating book review activity:",
           activityError
@@ -584,10 +792,13 @@ export default function BookActions({
     }
 
     const {
-      error: deleteError,
+      error:
+        deleteError,
     } =
       await supabase
-        .from("library_items")
+        .from(
+          "library_items"
+        )
         .delete()
         .eq(
           "user_id",
@@ -602,17 +813,27 @@ export default function BookActions({
           book.id
         );
 
-    if (deleteError) {
+    if (
+      deleteError
+    ) {
       setMessage(
         deleteError.message
       );
 
       setLoading(false);
+
       return;
     }
 
     setStatus(null);
-    setShowReview(false);
+
+    setHasReadBefore(
+      true
+    );
+
+    setShowReview(
+      false
+    );
 
     setMessage(
       isReread
@@ -621,93 +842,88 @@ export default function BookActions({
     );
 
     setLoading(false);
+
+    router.refresh();
   }
 
   return (
     <>
-      <section className="mt-10">
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={
-              openReadModal
-            }
-            className="rounded-xl bg-fuchsia-500 px-5 py-3 font-medium text-white transition hover:bg-fuchsia-400"
-          >
-            Marcar como leído
-          </button>
+      <MediaActionBar
+        primaryLabel={
+          hasReadBefore
+            ? "Registrar relectura"
+            : "Marcar como leído"
+        }
+        onPrimaryAction={
+          openReadModal
+        }
+        primaryDisabled={
+          loading
+        }
+        activeStatus={
+          status
+        }
+        statusDisabled={
+          loading
+        }
+        statusOptions={[
+          {
+            value:
+              "IN_PROGRESS",
 
-          <button
-            type="button"
-            onClick={() =>
-              setLibraryStatus(
-                "IN_PROGRESS"
-              )
-            }
-            disabled={
-              loading ||
-              status ===
-                "IN_PROGRESS"
-            }
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {status ===
-            "IN_PROGRESS"
-              ? "✓ Leyendo"
-              : "Leyendo"}
-          </button>
+            label:
+              "Leyendo",
+          },
+          {
+            value:
+              "PENDING",
 
-          <button
-            type="button"
-            onClick={() =>
-              setLibraryStatus(
-                "PENDING"
-              )
-            }
-            disabled={
-              loading ||
-              status ===
-                "PENDING"
-            }
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {status ===
-            "PENDING"
-              ? "✓ Pendiente"
-              : "Pendiente"}
-          </button>
+            label:
+              "Pendiente",
+          },
+          {
+            value:
+              "DROPPED",
 
-          <button
-            type="button"
-            onClick={() =>
-              setLibraryStatus(
-                "DROPPED"
-              )
-            }
-            disabled={
-              loading ||
-              status ===
-                "DROPPED"
-            }
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {status ===
-            "DROPPED"
-              ? "✓ Abandonado"
-              : "Abandonar"}
-          </button>
-        </div>
+            label:
+              "Abandonado",
 
-        {message && (
-          <p className="mt-3 text-sm text-zinc-400">
-            {message}
-          </p>
-        )}
-      </section>
+            destructive:
+              true,
+          },
+        ]}
+        onStatusChange={(
+          newStatus
+        ) => {
+          if (
+            newStatus ===
+            null
+          ) {
+            return setLibraryStatus(
+              null
+            );
+          }
+
+          if (
+            !isBookStatus(
+              newStatus
+            )
+          ) {
+            return;
+          }
+
+          return setLibraryStatus(
+            newStatus
+          );
+        }}
+        message={
+          message
+        }
+      />
 
       {showReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950 p-7 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7">
             <button
               type="button"
               onClick={() =>
@@ -715,13 +931,17 @@ export default function BookActions({
                   false
                 )
               }
-              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white"
+              disabled={
+                loading
+              }
+              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white disabled:opacity-50"
+              aria-label="Cerrar"
             >
               ×
             </button>
 
             <div className="grid gap-8 md:grid-cols-[180px_1fr] md:items-start">
-              <div className="flex justify-center md:justify-start md:pt-16">
+              <div className="flex justify-center md:justify-start md:pt-12">
                 <div className="w-full max-w-[180px]">
                   {book.coverUrl ? (
                     <Image
@@ -731,12 +951,19 @@ export default function BookActions({
                       alt={
                         book.title
                       }
+                      width={
+                        500
+                      }
+                      height={
+                        750
+                      }
+                      unoptimized={
+                        shouldUseOriginalImage(
+                          book.coverUrl
+                        )
+                      }
                       className="w-full rounded-xl object-cover shadow-xl"
-                    
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(book.coverUrl)}
-        />
+                    />
                   ) : (
                     <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
                       Sin imagen
@@ -745,65 +972,54 @@ export default function BookActions({
                 </div>
               </div>
 
-              <div className="pt-7">
-                <h2 className="text-2xl font-bold">
-                  {book.title}
+              <div className="min-w-0 pt-2 md:pt-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
+                  {isReread
+                    ? "Registrar relectura"
+                    : "Libro leído"}
+                </p>
+
+                <h2 className="mt-2 pr-10 text-2xl font-bold text-zinc-100">
+                  {
+                    book.title
+                  }
                 </h2>
 
                 {book.authors.length >
                   0 && (
-                  <p className="mt-2 text-sm text-zinc-500">
+                  <p className="mt-1 text-sm text-zinc-500">
                     {book.authors.join(
                       ", "
                     )}
                   </p>
                 )}
 
+                <p className="mt-5 text-sm text-zinc-500">
+                  Leído el{" "}
+                  <span className="text-zinc-300">
+                    {formatDate(
+                      readDate
+                    )}
+                  </span>
+                </p>
+
                 <div className="mt-6">
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowDate(
-                          !showDate
-                        )
-                      }
-                      className="flex items-center gap-3"
-                    >
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-sm border transition ${
-                          showDate
-                            ? "border-zinc-300 bg-zinc-300"
-                            : "border-zinc-500 bg-transparent"
-                        }`}
-                      >
-                        {showDate && (
-                          <svg
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#111827"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="m5 12 4 4L19 6" />
-                          </svg>
-                        )}
-                      </span>
+                  <p className="mb-2 text-sm font-medium text-zinc-300">
+                    Tu puntuación
+                  </p>
 
-                      <span>
-                        Read on
-                      </span>
-                    </button>
-
-                    <span className="rounded bg-zinc-800 px-2.5 py-1 text-sm text-zinc-200">
-                      {formatDate(
-                        readDate
-                      )}
-                    </span>
-                  </div>
+                  <StarRating
+                    value={
+                      rating
+                    }
+                    onChange={
+                      setRating
+                    }
+                    size={34}
+                    showLabel={
+                      false
+                    }
+                  />
                 </div>
 
                 <textarea
@@ -814,36 +1030,42 @@ export default function BookActions({
                     event
                   ) =>
                     setReview(
-                      event.target
-                        .value
+                      event.target.value
                     )
                   }
-                  placeholder="Escribe tu review..."
-                  rows={7}
-                  className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-fuchsia-500"
+                  placeholder="Escribe tu review (opcional)..."
+                  rows={6}
+                  className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm leading-6 text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-fuchsia-500"
                 />
 
-                <div className="mt-8 grid grid-cols-3 gap-6">
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <button
                     type="button"
                     onClick={() =>
                       setIsReread(
-                        !isReread
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
-                    className={`flex flex-col items-center gap-2 transition ${
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
                       isReread
-                        ? "text-fuchsia-400"
-                        : "text-zinc-300"
+                        ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300"
+                        : "border-zinc-800 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
                     }`}
                   >
-                    <ReadToggleIcon
-                      reread={
-                        isReread
-                      }
-                    />
+                    {isReread ? (
+                      <Repeat2
+                        size={25}
+                      />
+                    ) : (
+                      <BookOpen
+                        size={25}
+                      />
+                    )}
 
-                    <span className="text-center text-sm">
+                    <span className="text-sm">
                       {isReread
                         ? "Relectura"
                         : "Primera lectura"}
@@ -854,24 +1076,25 @@ export default function BookActions({
                     type="button"
                     onClick={() =>
                       setContainsSpoilers(
-                        !containsSpoilers
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
-                    className={`flex flex-col items-center gap-2 transition ${
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
                       containsSpoilers
-                        ? "text-fuchsia-400"
-                        : "text-zinc-300"
+                        ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300"
+                        : "border-zinc-800 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
                     }`}
                   >
-                    <SpoilerToggleIcon
-                      active={
-                        containsSpoilers
-                      }
+                    <ShieldAlert
+                      size={25}
                     />
 
-                    <span className="text-center text-sm">
+                    <span className="text-sm">
                       {containsSpoilers
-                        ? "Contiene spoilers"
+                        ? "Con spoilers"
                         : "Sin spoilers"}
                     </span>
                   </button>
@@ -880,22 +1103,28 @@ export default function BookActions({
                     type="button"
                     onClick={() =>
                       setLiked(
-                        !liked
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
-                    className={`flex flex-col items-center gap-2 transition ${
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
                       liked
-                        ? "text-red-500"
-                        : "text-zinc-400"
+                        ? "border-red-500/40 bg-red-500/10 text-red-400"
+                        : "border-zinc-800 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
                     }`}
                   >
-                    <HeartToggleIcon
-                      liked={
+                    <Heart
+                      size={25}
+                      fill={
                         liked
+                          ? "currentColor"
+                          : "none"
                       }
                     />
 
-                    <span className="text-center text-sm text-zinc-300">
+                    <span className="text-sm">
                       {liked
                         ? "Me gustó"
                         : "No me gustó"}
@@ -904,12 +1133,14 @@ export default function BookActions({
                 </div>
 
                 {message && (
-                  <p className="mt-5 text-sm text-zinc-400">
-                    {message}
+                  <p className="mt-5 text-sm text-zinc-500">
+                    {
+                      message
+                    }
                   </p>
                 )}
 
-                <div className="mt-8 flex justify-end">
+                <div className="mt-7 flex justify-end">
                   <button
                     type="button"
                     onClick={
@@ -918,11 +1149,13 @@ export default function BookActions({
                     disabled={
                       loading
                     }
-                    className="rounded-xl bg-fuchsia-500 px-6 py-3 font-medium text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
+                    className="rounded-xl bg-fuchsia-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading
                       ? "Guardando..."
-                      : "Guardar review"}
+                      : isReread
+                        ? "Guardar relectura"
+                        : "Guardar"}
                   </button>
                 </div>
               </div>

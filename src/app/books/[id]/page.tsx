@@ -1,5 +1,10 @@
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import Image from "next/image";
+import {
+  BookOpen,
+  UserRound,
+} from "lucide-react";
+
+import MediaDetailLayout from "@/components/media/MediaDetailLayout";
+
 import {
   getAuthorDetails,
   getBookDescription,
@@ -15,18 +20,214 @@ interface BookPageProps {
   }>;
 }
 
+/*
+ * Open Library puede devolver subjects bastante
+ * desordenados:
+ *
+ * - duplicados
+ * - etiquetas internas
+ * - categorías separadas por comas
+ * - diferencias como Science-fiction / Science fiction
+ *
+ * Aquí los convertimos en unas pocas etiquetas
+ * útiles para la interfaz.
+ */
+
+function cleanSubjects(
+  subjects:
+    | string[]
+    | undefined
+) {
+  const result:
+    string[] =
+    [];
+
+  const seen =
+    new Set<string>();
+
+  for (
+    const rawSubject
+    of subjects ?? []
+  ) {
+    /*
+     * Algunos subjects contienen varias categorías.
+     */
+    const parts =
+      rawSubject.split(
+        /[,;]+/
+      );
+
+    for (
+      const rawPart
+      of parts
+    ) {
+      let subject =
+        rawPart
+          .trim()
+          .replace(
+            /[-_]+/g,
+            " "
+          )
+          .replace(
+            /\s+/g,
+            " "
+          );
+
+      if (
+        !subject
+      ) {
+        continue;
+      }
+
+      const normalized =
+        subject.toLowerCase();
+
+      /*
+       * Metadata / categorías poco útiles.
+       */
+
+      if (
+        normalized.startsWith(
+          "nyt:"
+        ) ||
+        normalized.includes(
+          "imaginary place"
+        ) ||
+        normalized.includes(
+          "new york times"
+        ) ||
+        normalized.includes(
+          "mass market"
+        ) ||
+        normalized.includes(
+          "reviewed"
+        ) ||
+        normalized.includes(
+          "="
+        ) ||
+        /\b\d{4}\b/.test(
+          normalized
+        )
+      ) {
+        continue;
+      }
+
+      /*
+       * Etiquetas demasiado genéricas o poco útiles.
+       */
+
+      if (
+        normalized ===
+          "general" ||
+        normalized ===
+          "books" ||
+        normalized ===
+          "literature"
+      ) {
+        continue;
+      }
+
+      /*
+       * Evitamos frases enormes.
+       */
+
+      if (
+        subject.length >
+        32
+      ) {
+        continue;
+      }
+
+      /*
+       * Normalizaciones visuales comunes.
+       */
+
+      if (
+        normalized ===
+        "science fiction"
+      ) {
+        subject =
+          "Science fiction";
+      }
+
+      if (
+        normalized ===
+        "fiction"
+      ) {
+        subject =
+          "Fiction";
+      }
+
+      const dedupeKey =
+        subject
+          .toLowerCase()
+          .replace(
+            /[^a-z0-9]/g,
+            ""
+          );
+
+      if (
+        !dedupeKey ||
+        seen.has(
+          dedupeKey
+        )
+      ) {
+        continue;
+      }
+
+      seen.add(
+        dedupeKey
+      );
+
+      result.push(
+        subject
+      );
+
+      /*
+       * No queremos convertir la ficha
+       * en una nube de etiquetas.
+       */
+      if (
+        result.length >=
+        4
+      ) {
+        return result;
+      }
+    }
+  }
+
+  return result;
+}
+
 export default async function BookPage({
   params,
 }: BookPageProps) {
-  const { id } = await params;
+  const {
+    id,
+  } =
+    await params;
 
-  const book = await getBookDetails(id);
+  const book =
+    await getBookDetails(
+      id
+    );
+
+  /*
+   * DESCRIPTION
+   */
 
   const description =
-    getBookDescription(book.description);
+    getBookDescription(
+      book.description
+    );
+
+  /*
+   * COVER
+   */
 
   const coverId =
-    book.covers?.[0] ?? null;
+    book.covers?.[0] ??
+    null;
 
   const cover =
     getOpenLibraryCoverUrl(
@@ -34,18 +235,38 @@ export default async function BookPage({
       "L"
     );
 
+  /*
+   * AUTHORS
+   */
+
   const authorKeys =
     book.authors
       ?.map(
-        (entry) =>
-          entry.author?.key
+        (
+          entry
+        ) =>
+          entry.author
+            ?.key
       )
-      .filter(Boolean) ?? [];
+      .filter(
+        (
+          key
+        ): key is string =>
+          Boolean(
+            key
+          )
+      ) ??
+    [];
 
   const authorResults =
     await Promise.all(
-      authorKeys.map((key) =>
-        getAuthorDetails(key)
+      authorKeys.map(
+        (
+          key
+        ) =>
+          getAuthorDetails(
+            key
+          )
       )
     );
 
@@ -56,97 +277,130 @@ export default async function BookPage({
           author
         ): author is NonNullable<
           typeof author
-        > => Boolean(author)
+        > =>
+          Boolean(
+            author
+          )
       )
       .map(
-        (author) =>
+        (
+          author
+        ) =>
           author.name
       );
 
+  /*
+   * SUBJECTS
+   */
+
   const subjects =
-    book.subjects
-      ?.slice(0, 8) ?? [];
+    cleanSubjects(
+      book.subjects
+    );
+
+  /*
+   * HERO META
+   */
+
+  const meta:
+    string[] =
+    [];
+
+  if (
+    authors.length >
+    0
+  ) {
+    meta.push(
+      authors.join(
+        ", "
+      )
+    );
+  }
+
+  /*
+   * INFORMATION
+   */
+
+  const information = [
+    {
+      label:
+        "Tipo",
+
+      value:
+        "Libro",
+
+      icon: (
+        <BookOpen
+          size={15}
+        />
+      ),
+    },
+
+    ...(authors.length >
+    0
+      ? [
+          {
+            label:
+              authors.length ===
+              1
+                ? "Autor"
+                : "Autores",
+
+            value:
+              authors.join(
+                ", "
+              ),
+
+            icon: (
+              <UserRound
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <main className="pb-16">
-      <div className="grid items-start gap-8 md:grid-cols-[260px_minmax(0,1fr)]">
+    <MediaDetailLayout
+      title={
+        book.title
+      }
+      eyebrow="Libro"
+      heroMode="compact"
+      coverUrl={
+        cover
+      }
+      backdropUrl={
+        null
+      }
+      meta={
+        meta
+      }
+      tags={
+        subjects
+      }
+      description={
+        description
+      }
+      noDescriptionText="No hay una sinopsis disponible para este libro."
+      information={
+        information
+      }
+    >
+      <BookActions
+        book={{
+          id,
 
-        {/* PORTADA */}
-        <div className="self-start shrink-0">
-          {cover ? (
-            <Image
-              src={cover}
-              alt={book.title}
-              className="aspect-[2/3] w-full max-w-[260px] rounded-2xl object-cover shadow-2xl"
-            
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(cover)}
-        />
-          ) : (
-            <div className="flex aspect-[2/3] w-full max-w-[260px] items-center justify-center rounded-2xl bg-zinc-900 px-5 text-center text-zinc-500">
-              Sin imagen
-            </div>
-          )}
-        </div>
+          title:
+            book.title,
 
-        {/* INFORMACIÓN */}
-        <div className="min-w-0">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-100">
-            {book.title}
-          </h1>
+          coverUrl:
+            cover,
 
-          {/* AUTORES */}
-          {authors.length > 0 && (
-            <p className="mt-3 text-lg text-zinc-400">
-              {authors.join(", ")}
-            </p>
-          )}
-
-          {/* ETIQUETAS */}
-          {subjects.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {subjects.map(
-                (subject) => (
-                  <span
-                    key={subject}
-                    className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm text-zinc-300"
-                  >
-                    {subject}
-                  </span>
-                )
-              )}
-            </div>
-          )}
-
-          {/* SINOPSIS */}
-          <div className="mt-8 max-w-4xl">
-            <h2 className="text-xl font-semibold text-zinc-100">
-              Sinopsis
-            </h2>
-
-            {description ? (
-              <p className="mt-4 whitespace-pre-line leading-7 text-zinc-300">
-                {description}
-              </p>
-            ) : (
-              <p className="mt-4 text-zinc-500">
-                No hay descripción disponible para este libro.
-              </p>
-            )}
-          </div>
-
-          {/* ACCIONES */}
-          <BookActions
-            book={{
-              id,
-              title: book.title,
-              coverUrl: cover,
-              authors,
-            }}
-          />
-        </div>
-      </div>
-    </main>
+          authors,
+        }}
+      />
+    </MediaDetailLayout>
   );
 }

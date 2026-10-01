@@ -1,9 +1,18 @@
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import Image from "next/image";
-import { getSeriesDetails } from "@/lib/tmdb";
+import {
+  CalendarDays,
+  Layers3,
+  ListVideo,
+  Tv,
+} from "lucide-react";
 
-import SeriesActions from "./SeriesActions";
+import MediaDetailLayout from "@/components/media/MediaDetailLayout";
+
+import {
+  getSeriesDetails,
+} from "@/lib/tmdb";
+
 import Seasons from "./Seasons";
+import SeriesActions from "./SeriesActions";
 
 type Genre = {
   id: number;
@@ -22,16 +31,23 @@ type SeriesDetails = {
   id: number;
 
   name: string;
+
   original_name?: string;
 
   overview?: string;
 
-  poster_path?: string | null;
-  backdrop_path?: string | null;
+  poster_path?:
+    | string
+    | null;
+
+  backdrop_path?:
+    | string
+    | null;
 
   first_air_date?: string;
 
   number_of_seasons?: number;
+
   number_of_episodes?: number;
 
   genres?: Genre[];
@@ -45,141 +61,305 @@ interface SeriesPageProps {
   }>;
 }
 
+function formatReleaseDate(
+  date:
+    | string
+    | undefined
+) {
+  if (!date) {
+    return null;
+  }
+
+  try {
+    return new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        day:
+          "numeric",
+
+        month:
+          "long",
+
+        year:
+          "numeric",
+
+        timeZone:
+          "UTC",
+      }
+    ).format(
+      new Date(
+        `${date}T00:00:00Z`
+      )
+    );
+  } catch {
+    return date;
+  }
+}
+
 export default async function SeriesDetailsPage({
   params,
 }: SeriesPageProps) {
-  const { id } = await params;
+  const {
+    id,
+  } =
+    await params;
 
   const show =
     (await getSeriesDetails(
       id
     )) as SeriesDetails;
 
+  /*
+   * IMAGES
+   */
+
+  const poster =
+    show.poster_path
+      ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
+      : null;
+
+  const backdrop =
+    show.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${show.backdrop_path}`
+      : null;
+
+  /*
+   * BASIC INFO
+   */
+
   const year =
-    show.first_air_date?.slice(0, 4);
+    show.first_air_date
+      ? Number(
+          show.first_air_date.slice(
+            0,
+            4
+          )
+        )
+      : null;
 
-  const backdrop = show.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${show.backdrop_path}`
-    : null;
+  const releaseDate =
+    formatReleaseDate(
+      show.first_air_date
+    );
 
-  const poster = show.poster_path
-    ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
-    : null;
+  const seasonCount =
+    show.number_of_seasons ??
+    null;
+
+  const episodeCount =
+    show.number_of_episodes ??
+    null;
+
+  const genres =
+    show.genres ?? [];
+
+  const originalName =
+    show.original_name &&
+    show.original_name !==
+      show.name
+      ? show.original_name
+      : null;
+
+  /*
+   * HERO META
+   */
+
+  const meta: string[] =
+    [];
+
+  if (year) {
+    meta.push(
+      String(
+        year
+      )
+    );
+  }
+
+  if (
+    seasonCount !==
+    null
+  ) {
+    meta.push(
+      `${seasonCount} ${
+        seasonCount === 1
+          ? "temporada"
+          : "temporadas"
+      }`
+    );
+  }
+
+  if (
+    episodeCount !==
+    null
+  ) {
+    meta.push(
+      `${episodeCount} ${
+        episodeCount === 1
+          ? "episodio"
+          : "episodios"
+      }`
+    );
+  }
+
+  /*
+   * TAGS
+   */
+
+  const tags =
+    genres.map(
+      (
+        genre
+      ) =>
+        genre.name
+    );
+
+  /*
+   * INFORMATION
+   */
+
+  const information = [
+    ...(releaseDate
+      ? [
+          {
+            label:
+              "Estreno",
+
+            value:
+              releaseDate,
+
+            icon: (
+              <CalendarDays
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+
+    {
+      label:
+        "Tipo",
+
+      value:
+        "Serie",
+
+      icon: (
+        <Tv
+          size={15}
+        />
+      ),
+    },
+
+    ...(seasonCount !==
+    null
+      ? [
+          {
+            label:
+              "Temporadas",
+
+            value:
+              String(
+                seasonCount
+              ),
+
+            icon: (
+              <Layers3
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+
+    ...(episodeCount !==
+    null
+      ? [
+          {
+            label:
+              "Episodios",
+
+            value:
+              String(
+                episodeCount
+              ),
+
+            icon: (
+              <ListVideo
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+
+    ...(originalName
+      ? [
+          {
+            label:
+              "Título original",
+
+            value:
+              originalName,
+
+            icon: (
+              <Tv
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <main className="pb-16">
-      {/* BANNER */}
-      {backdrop && (
-        <div className="relative -mx-8 -mt-8 h-[290px] overflow-hidden lg:-mx-10">
-          <Image
-            src={backdrop}
-            alt=""
-            className="h-full w-full object-cover"
-          
-          width={1280}
-          height={720}
-          unoptimized={shouldUseOriginalImage(backdrop)}
+    <MediaDetailLayout
+      title={
+        show.name
+      }
+      eyebrow="Serie"
+      coverUrl={
+        poster
+      }
+      backdropUrl={
+        backdrop
+      }
+      meta={
+        meta
+      }
+      tags={
+        tags
+      }
+      description={
+        show.overview ??
+        null
+      }
+      noDescriptionText="No hay una sinopsis disponible para esta serie."
+      information={
+        information
+      }
+      mainContent={
+        <Seasons
+          seriesId={
+            show.id
+          }
+          seriesTitle={
+            show.name
+          }
+          posterPath={
+            show.poster_path
+          }
+          seasons={
+            show.seasons ??
+            []
+          }
         />
-
-          <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black" />
-        </div>
-      )}
-
-      {/* CONTENIDO PRINCIPAL */}
-      <div
-        className={`grid items-start gap-8 md:grid-cols-[260px_minmax(0,1fr)] ${
-          backdrop
-            ? "-mt-14 relative z-10"
-            : ""
-        }`}
-      >
-        {/* PORTADA */}
-        <div className="self-start shrink-0">
-          {poster ? (
-            <Image
-              src={poster}
-              alt={show.name}
-              className="aspect-[2/3] w-full max-w-[260px] rounded-2xl object-cover shadow-2xl"
-            
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(poster)}
-        />
-          ) : (
-            <div className="flex aspect-[2/3] w-full max-w-[260px] items-center justify-center rounded-2xl bg-zinc-900 text-zinc-500">
-              Sin imagen
-            </div>
-          )}
-        </div>
-
-        {/* DERECHA */}
-        <div className="min-w-0">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-100">
-            {show.name}
-          </h1>
-
-          {/* INFO */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-zinc-500">
-            {year && (
-              <span>{year}</span>
-            )}
-
-            {show.number_of_seasons !==
-              undefined && (
-              <span>
-                {show.number_of_seasons}{" "}
-                {show.number_of_seasons === 1
-                  ? "temporada"
-                  : "temporadas"}
-              </span>
-            )}
-
-            {show.number_of_episodes !==
-              undefined && (
-              <span>
-                {show.number_of_episodes}{" "}
-                episodios
-              </span>
-            )}
-          </div>
-
-          {/* GENEROS */}
-          {show.genres &&
-            show.genres.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {show.genres.map(
-                  (genre) => (
-                    <span
-                      key={genre.id}
-                      className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm text-zinc-300"
-                    >
-                      {genre.name}
-                    </span>
-                  )
-                )}
-              </div>
-            )}
-
-          {/* SINOPSIS */}
-          <p className="mt-7 max-w-4xl text-base leading-7 text-zinc-300">
-            {show.overview ||
-              "Sin descripción disponible."}
-          </p>
-
-          {/* ACCIONES */}
-          <SeriesActions show={show} />
-
-          {/* TEMPORADAS / EPISODIOS */}
-          <Seasons
-            seriesId={show.id}
-            seriesTitle={show.name}
-            posterPath={show.poster_path}
-            seasons={
-              show.seasons ?? []
-            }
-          />
-        </div>
-      </div>
-    </main>
+      }
+    >
+      <SeriesActions
+        show={
+          show
+        }
+      />
+    </MediaDetailLayout>
   );
 }

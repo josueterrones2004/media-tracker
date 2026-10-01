@@ -1,131 +1,297 @@
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import Image from "next/image";
-import { getMovieDetails } from "@/lib/tmdb";
+import {
+  CalendarDays,
+  Clapperboard,
+  Clock3,
+} from "lucide-react";
+
+import MediaDetailLayout from "@/components/media/MediaDetailLayout";
+
+import {
+  getMovieDetails,
+} from "@/lib/tmdb";
+
 import MovieActions from "./MovieActions";
 
-interface Props {
+interface MoviePageProps {
   params: Promise<{
     id: string;
   }>;
 }
 
+type Genre = {
+  id: number;
+  name: string;
+};
+
+type MovieDetails = {
+  id: number;
+
+  title: string;
+
+  original_title?: string;
+
+  overview?: string;
+
+  poster_path?:
+    | string
+    | null;
+
+  backdrop_path?:
+    | string
+    | null;
+
+  release_date?: string;
+
+  runtime?: number;
+
+  genres?: Genre[];
+};
+
+function formatReleaseDate(
+  date:
+    | string
+    | undefined
+) {
+  if (
+    !date
+  ) {
+    return null;
+  }
+
+  try {
+    return new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        day:
+          "numeric",
+
+        month:
+          "long",
+
+        year:
+          "numeric",
+
+        timeZone:
+          "UTC",
+      }
+    ).format(
+      new Date(
+        `${date}T00:00:00Z`
+      )
+    );
+  } catch {
+    return date;
+  }
+}
+
 export default async function MoviePage({
   params,
-}: Props) {
-  const { id } = await params;
+}: MoviePageProps) {
+  const {
+    id,
+  } =
+    await params;
 
-  const movie = await getMovieDetails(id);
+  const movie =
+    (await getMovieDetails(
+      id
+    )) as MovieDetails;
 
-  const poster = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : null;
+  /*
+   * IMAGES
+   */
 
-  const backdrop = movie.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
-    : null;
+  const poster =
+    movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : null;
+
+  const backdrop =
+    movie.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+      : null;
+
+  /*
+   * BASIC INFO
+   */
+
+  const year =
+    movie.release_date
+      ? Number(
+          movie.release_date.slice(
+            0,
+            4
+          )
+        )
+      : null;
+
+  const runtime =
+    movie.runtime &&
+    movie.runtime >
+      0
+      ? movie.runtime
+      : null;
+
+  const genres =
+    movie.genres ??
+    [];
+
+  const releaseDate =
+    formatReleaseDate(
+      movie.release_date
+    );
+
+  const originalTitle =
+    movie.original_title &&
+    movie.original_title !==
+      movie.title
+      ? movie.original_title
+      : null;
+
+  /*
+   * HERO META
+   */
+
+  const meta:
+    string[] =
+    [];
+
+  if (
+    year
+  ) {
+    meta.push(
+      String(
+        year
+      )
+    );
+  }
+
+  if (
+    runtime
+  ) {
+    meta.push(
+      `${runtime} min`
+    );
+  }
+
+  /*
+   * TAGS
+   */
+
+  const tags =
+    genres.map(
+      (
+        genre
+      ) =>
+        genre.name
+    );
+
+  /*
+   * INFORMATION SIDEBAR
+   */
+
+  const information = [
+    ...(releaseDate
+      ? [
+          {
+            label:
+              "Lanzamiento",
+
+            value:
+              releaseDate,
+
+            icon: (
+              <CalendarDays
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+
+    {
+      label:
+        "Tipo",
+
+      value:
+        "Película",
+
+      icon: (
+        <Clapperboard
+          size={15}
+        />
+      ),
+    },
+
+    ...(runtime
+      ? [
+          {
+            label:
+              "Duración",
+
+            value:
+              `${runtime} minutos`,
+
+            icon: (
+              <Clock3
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+
+    ...(originalTitle
+      ? [
+          {
+            label:
+              "Título original",
+
+            value:
+              originalTitle,
+
+            icon: (
+              <Clapperboard
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <main className="mx-auto max-w-6xl">
-      {/* Banner */}
-      <div className="relative h-[360px] overflow-hidden rounded-2xl bg-zinc-900">
-        {backdrop && (
-          <Image
-            src={backdrop}
-            alt=""
-            className="h-full w-full object-cover"
-          
-          width={1280}
-          height={720}
-          unoptimized={shouldUseOriginalImage(backdrop)}
-        />
-        )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
-      </div>
-
-      {/* Portada + información */}
-      <div className="relative -mt-20 px-8">
-        <div className="flex flex-col gap-8 md:flex-row md:items-end">
-
-          <div className="shrink-0">
-            {poster ? (
-              <Image
-                src={poster}
-                alt={movie.title}
-                className="w-56 rounded-xl border-4 border-zinc-950 object-cover shadow-2xl"
-              
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(poster)}
-        />
-            ) : (
-              <div className="flex aspect-[2/3] w-56 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500">
-                Sin imagen
-              </div>
-            )}
-          </div>
-
-          <div className="pb-4">
-            <h1 className="text-4xl font-bold">
-              {movie.title}
-            </h1>
-
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-zinc-400">
-
-              {movie.release_date && (
-                <span>
-                  {movie.release_date.slice(
-                    0,
-                    4
-                  )}
-                </span>
-              )}
-
-              {movie.runtime > 0 && (
-                <>
-                  <span>·</span>
-
-                  <span>
-                    {movie.runtime} min
-                  </span>
-                </>
-              )}
-            </div>
-
-            {movie.genres?.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {movie.genres.map(
-                  (genre: {
-                    id: number;
-                    name: string;
-                  }) => (
-                    <span
-                      key={genre.id}
-                      className="rounded-full bg-zinc-900 px-3 py-1 text-sm text-zinc-300"
-                    >
-                      {genre.name}
-                    </span>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sinopsis */}
-        <section className="mt-10 max-w-3xl">
-          <h2 className="text-lg font-semibold">
-            Sinopsis
-          </h2>
-
-          <p className="mt-3 leading-7 text-zinc-300">
-            {movie.overview ||
-              "No hay sinopsis disponible."}
-          </p>
-        </section>
-
-        <MovieActions movie={movie} />
-      </div>
-    </main>
+    <MediaDetailLayout
+      title={
+        movie.title
+      }
+      eyebrow="Película"
+      coverUrl={
+        poster
+      }
+      backdropUrl={
+        backdrop
+      }
+      meta={
+        meta
+      }
+      tags={
+        tags
+      }
+      description={
+        movie.overview ??
+        null
+      }
+      noDescriptionText="No hay una sinopsis disponible para esta película."
+      information={
+        information
+      }
+    >
+      <MovieActions
+        movie={
+          movie
+        }
+      />
+    </MediaDetailLayout>
   );
 }

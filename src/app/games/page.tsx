@@ -2,8 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import { createClient } from "@/lib/supabase/server";
+import LibraryReviewModalCard, {
+  type LibraryReview,
+} from "@/components/media/LibraryReviewModalCard";
+
+import {
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
+
+import {
+  createClient,
+} from "@/lib/supabase/server";
 
 type LibraryGame = {
   id: string;
@@ -16,14 +25,6 @@ type LibraryGame = {
     | "PENDING"
     | "IN_PROGRESS"
     | "DROPPED";
-};
-
-type ReviewGame = {
-  id: string;
-  external_id: string;
-  title: string;
-  cover_url: string | null;
-  release_year: number | null;
 };
 
 export default async function GamesPage() {
@@ -87,7 +88,13 @@ export default async function GamesPage() {
         external_id,
         title,
         cover_url,
-        release_year
+        release_year,
+        rating,
+        liked,
+        is_rewatch,
+        contains_spoilers,
+        consumed_at,
+        review_text
       `)
       .eq(
         "user_id",
@@ -99,6 +106,12 @@ export default async function GamesPage() {
       )
       .order(
         "consumed_at",
+        {
+          ascending: false,
+        }
+      )
+      .order(
+        "created_at",
         {
           ascending: false,
         }
@@ -133,7 +146,7 @@ export default async function GamesPage() {
 
   const completed =
     (reviewRows ??
-      []) as ReviewGame[];
+      []) as LibraryReview[];
 
   const playing =
     games.filter(
@@ -186,13 +199,17 @@ export default async function GamesPage() {
             Todavía no has completado ningún juego.
           </p>
         ) : (
-          <div className="mt-5 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {completed.map(
-              (game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  label="Completado"
+              (review) => (
+                <LibraryReviewModalCard
+                  key={
+                    review.id
+                  }
+                  review={
+                    review
+                  }
+                  mediaType="GAME"
                 />
               )
             )}
@@ -259,12 +276,7 @@ function GameCard({
   game,
   label,
 }: {
-  game: {
-    external_id: string;
-    title: string;
-    cover_url: string | null;
-    release_year: number | null;
-  };
+  game: LibraryGame;
   label: string;
 }) {
   return (
@@ -275,8 +287,12 @@ function GameCard({
       <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition group-hover:border-zinc-500">
         {game.cover_url ? (
           <Image
-            src={game.cover_url}
-            alt={game.title}
+            src={
+              game.cover_url
+            }
+            alt={
+              game.title
+            }
             width={500}
             height={750}
             unoptimized={
@@ -302,7 +318,9 @@ function GameCard({
           {game.release_year && (
             <>
               <span>
-                {game.release_year}
+                {
+                  game.release_year
+                }
               </span>
 
               <span>·</span>

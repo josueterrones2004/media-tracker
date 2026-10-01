@@ -1,10 +1,12 @@
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+} from "@/lib/supabase/server";
 
-import ProfileDetailsEditor from "./ProfileDetailsEditor";
-import ProfileFavoritesEditor from "./ProfileFavoritesEditor";
-import ProfileSectionsEditor from "./ProfileSectionsEditor";
+import ProfileCustomizeEditor from "./ProfileCustomizeEditor";
 
 type SectionKey =
   | "ACTIVITY"
@@ -14,202 +16,249 @@ type SectionKey =
   | "FAVORITE_GAMES";
 
 type SectionRow = {
-  section_key: SectionKey;
-  visible: boolean;
-  position: number;
+  section_key:
+    SectionKey;
+
+  visible:
+    boolean;
+
+  position:
+    number;
 };
 
 export default async function CustomizeProfilePage() {
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect(
+      "/auth"
+    );
   }
 
   const [
     profileResult,
     sectionsResult,
     favoritesResult,
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select(`
-        username,
-        display_name,
-        bio,
-        avatar_url,
-        banner_url,
-        avatar_crop,
-        banner_crop
-      `)
-      .eq("id", user.id)
-      .single(),
+    activityResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "profiles"
+        )
+        .select(`
+          username,
+          display_name,
+          bio,
+          avatar_url,
+          banner_url,
+          avatar_crop,
+          banner_crop
+        `)
+        .eq(
+          "id",
+          user.id
+        )
+        .single(),
 
-    supabase
-      .from("profile_sections")
-      .select(`
-        section_key,
-        visible,
-        position
-      `)
-      .eq("user_id", user.id)
-      .order("position", {
-        ascending: true,
-      }),
+      supabase
+        .from(
+          "profile_sections"
+        )
+        .select(`
+          section_key,
+          visible,
+          position
+        `)
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "position",
+          {
+            ascending:
+              true,
+          }
+        ),
 
-    supabase
-      .from("profile_favorites")
-      .select(`
-        id,
-        media_type,
-        external_id,
-        title,
-        cover_url,
-        position
-      `)
-      .eq("user_id", user.id)
-      .order("media_type", {
-        ascending: true,
-      })
-      .order("position", {
-        ascending: true,
-      }),
-  ]);
+      supabase
+        .from(
+          "profile_favorites"
+        )
+        .select(`
+          id,
+          media_type,
+          external_id,
+          title,
+          cover_url,
+          position
+        `)
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "position",
+          {
+            ascending:
+              true,
+          }
+        ),
 
-  if (profileResult.error) {
-    throw new Error(profileResult.error.message);
-  }
+      supabase
+        .from(
+          "activity_events"
+        )
+        .select(`
+          id,
+          activity_type,
+          media_type,
+          external_id,
+          title,
+          cover_url,
+          created_at
+        `)
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(
+          6
+        ),
+    ]);
 
-  if (sectionsResult.error) {
-    console.error(
-      "Error loading sections:",
-      sectionsResult.error
+  if (
+    profileResult.error
+  ) {
+    throw new Error(
+      profileResult.error.message
     );
   }
 
-  if (favoritesResult.error) {
-    console.error(
-      "Error loading favorites:",
-      favoritesResult.error
-    );
-  }
+  const defaultSections:
+    SectionRow[] =
+    [
+      {
+        section_key:
+          "ACTIVITY",
 
-  const profile = profileResult.data;
+        visible:
+          true,
 
-  const defaultSections: SectionRow[] = [
-    {
-      section_key: "ACTIVITY",
-      visible: true,
-      position: 1,
-    },
-    {
-      section_key: "FAVORITE_MOVIES",
-      visible: true,
-      position: 2,
-    },
-    {
-      section_key: "FAVORITE_SERIES",
-      visible: true,
-      position: 3,
-    },
-    {
-      section_key: "FAVORITE_BOOKS",
-      visible: true,
-      position: 4,
-    },
-    {
-      section_key: "FAVORITE_GAMES",
-      visible: false,
-      position: 5,
-    },
-  ];
+        position:
+          1,
+      },
+
+      {
+        section_key:
+          "FAVORITE_MOVIES",
+
+        visible:
+          true,
+
+        position:
+          2,
+      },
+
+      {
+        section_key:
+          "FAVORITE_SERIES",
+
+        visible:
+          true,
+
+        position:
+          3,
+      },
+
+      {
+        section_key:
+          "FAVORITE_BOOKS",
+
+        visible:
+          true,
+
+        position:
+          4,
+      },
+
+      {
+        section_key:
+          "FAVORITE_GAMES",
+
+        visible:
+          true,
+
+        position:
+          5,
+      },
+    ];
 
   const sections =
     sectionsResult.data &&
-    sectionsResult.data.length > 0
-      ? (sectionsResult.data as SectionRow[])
+    sectionsResult.data.length >
+      0
+      ? (
+          sectionsResult.data as SectionRow[]
+        )
       : defaultSections;
 
   return (
-    <main className="pb-16">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-100">
-          Personalizar perfil
-        </h1>
+    <main className="pb-20">
+      <ProfileCustomizeEditor
+        userId={
+          user.id
+        }
+        initialProfile={{
+          username:
+            profileResult.data.username,
 
-        <p className="mt-2 text-zinc-500">
-          Cambia cómo se ve tu perfil y qué contenido quieres destacar.
-        </p>
-      </div>
+          displayName:
+            profileResult.data.display_name,
 
-      {/* PROFILE */}
+          bio:
+            profileResult.data.bio,
 
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold text-zinc-100">
-          Perfil
-        </h2>
+          avatarUrl:
+            profileResult.data.avatar_url,
 
-        <p className="mt-2 text-sm text-zinc-500">
-          Personaliza tu foto, banner, nombre de usuario y biografía.
-        </p>
+          bannerUrl:
+            profileResult.data.banner_url,
 
-        <div className="mt-5">
-          <ProfileDetailsEditor
-            userId={user.id}
-            initialProfile={{
-              username: profile.username,
-              displayName: profile.display_name,
-              bio: profile.bio,
-              avatarUrl: profile.avatar_url,
-              bannerUrl: profile.banner_url,
-              avatarCrop: profile.avatar_crop,
-              bannerCrop: profile.banner_crop,
-            }}
-          />
-        </div>
-      </section>
+          avatarCrop:
+            profileResult.data.avatar_crop,
 
-      {/* FAVORITES */}
-
-      <section className="mt-14 border-t border-zinc-900 pt-10">
-        <h2 className="text-xl font-semibold text-zinc-100">
-          Favoritos
-        </h2>
-
-        <p className="mt-2 text-sm text-zinc-500">
-          Busca películas, series o libros y elige hasta seis favoritos por categoría.
-        </p>
-
-        <div className="mt-6">
-          <ProfileFavoritesEditor
-            userId={user.id}
-            initialFavorites={favoritesResult.data ?? []}
-          />
-        </div>
-      </section>
-
-      {/* SECTIONS */}
-
-      <section className="mt-14 border-t border-zinc-900 pt-10">
-        <h2 className="text-xl font-semibold text-zinc-100">
-          Secciones
-        </h2>
-
-        <p className="mt-2 text-sm text-zinc-500">
-          Decide qué aparece en tu perfil y en qué orden.
-        </p>
-
-        <div className="mt-6">
-          <ProfileSectionsEditor
-            userId={user.id}
-            initialSections={sections}
-          />
-        </div>
-      </section>
+          bannerCrop:
+            profileResult.data.banner_crop,
+        }}
+        initialSections={
+          sections
+        }
+        initialFavorites={
+          favoritesResult.data ??
+          []
+        }
+        recentActivity={
+          activityResult.data ??
+          []
+        }
+      />
     </main>
   );
 }

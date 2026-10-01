@@ -1,44 +1,58 @@
+import Image from "next/image";
 import Link from "next/link";
+
+import {
+  BookOpen,
+  Clapperboard,
+  Gamepad2,
+  Heart,
+  Library,
+  Settings2,
+  Tv,
+} from "lucide-react";
 
 import {
   notFound,
   redirect,
 } from "next/navigation";
 
+import {
+  type ReactNode,
+} from "react";
+
 import FollowButton from "@/app/social/FollowButton";
-import { FOLLOW_TABLE } from "@/lib/follows";
-import { createClient } from "@/lib/supabase/server";
 
-import CroppedProfileImage, {
-  ProfileCrop,
-} from "../CroppedProfileImage";
+import {
+  FOLLOW_TABLE,
+} from "@/lib/follows";
 
-import ProfileMediaHeader from "../ProfileMediaHeader";
+import {
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
+
+import {
+  createClient,
+} from "@/lib/supabase/server";
+
+import ProfileActivity from "../ProfileActivity";
+
+import ProfileMediaHeader, {
+  CroppedProfileImage,
+  type ProfileCrop,
+} from "../ProfileMediaHeader";
+
 import ProfileSections from "../ProfileSections";
 
-interface PublicProfilePageProps {
-  params: Promise<{
-    username: string;
-  }>;
-}
+type SpecialRole =
+  | "OWNER"
+  | "BETA_TESTER"
+  | null;
 
-type Profile = {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  bio: string | null;
-
-  avatar_url: string | null;
-  banner_url: string | null;
-
-  avatar_crop: ProfileCrop | null;
-  banner_crop: ProfileCrop | null;
-
-  special_role:
-    | "OWNER"
-    | "BETA_TESTER"
-    | null;
-};
+type MediaType =
+  | "MOVIE"
+  | "SERIES"
+  | "BOOK"
+  | "GAME";
 
 type SectionKey =
   | "ACTIVITY"
@@ -47,52 +61,282 @@ type SectionKey =
   | "FAVORITE_BOOKS"
   | "FAVORITE_GAMES";
 
-type ProfileSectionRow = {
-  section_key: SectionKey;
-  visible: boolean;
-  position: number;
+type MobileTab =
+  | "profile"
+  | "activity"
+  | "pending";
+
+type Profile = {
+  id: string;
+
+  username:
+    | string
+    | null;
+
+  display_name:
+    | string
+    | null;
+
+  bio:
+    | string
+    | null;
+
+  avatar_url:
+    | string
+    | null;
+
+  banner_url:
+    | string
+    | null;
+
+  avatar_crop:
+    | ProfileCrop
+    | null;
+
+  banner_crop:
+    | ProfileCrop
+    | null;
+
+  special_role:
+    SpecialRole;
 };
 
-type MediaType =
-  | "MOVIE"
-  | "SERIES"
-  | "BOOK"
-  | "GAME";
+type ProfileSectionRow = {
+  section_key:
+    SectionKey;
+
+  visible:
+    boolean;
+
+  position:
+    number;
+};
 
 type ProfileFavoriteRow = {
   id: string;
-  media_type: MediaType;
-  external_id: string;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
   title: string;
-  cover_url: string | null;
+
+  cover_url:
+    | string
+    | null;
+
   position: number;
 };
 
+type LibraryItemRow = {
+  id: string;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title: string;
+
+  cover_url:
+    | string
+    | null;
+
+  status: string;
+};
+
+type ReviewRow = {
+  id: string;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title: string;
+
+  cover_url:
+    | string
+    | null;
+
+  created_at: string;
+};
+
+interface PublicProfilePageProps {
+  params: Promise<{
+    username: string;
+  }>;
+
+  searchParams: Promise<{
+    tab?: string;
+  }>;
+}
+
+function isMobileTab(
+  value:
+    | string
+    | undefined
+): value is MobileTab {
+  return (
+    value ===
+      "profile" ||
+    value ===
+      "activity" ||
+    value ===
+      "pending"
+  );
+}
+
+function getMediaHref(
+  mediaType:
+    MediaType,
+
+  externalId:
+    string
+) {
+  switch (
+    mediaType
+  ) {
+    case "MOVIE":
+      return `/movies/${externalId}`;
+
+    case "SERIES":
+      return `/series/${externalId}`;
+
+    case "BOOK":
+      return `/books/${externalId}`;
+
+    case "GAME":
+      return `/games/${externalId}`;
+  }
+}
+
+function getMediaLabel(
+  mediaType:
+    MediaType
+) {
+  switch (
+    mediaType
+  ) {
+    case "MOVIE":
+      return "Película";
+
+    case "SERIES":
+      return "Serie";
+
+    case "BOOK":
+      return "Libro";
+
+    case "GAME":
+      return "Juego";
+  }
+}
+
+function getCurrentLabel(
+  mediaType:
+    MediaType
+) {
+  switch (
+    mediaType
+  ) {
+    case "MOVIE":
+      return "Pendiente";
+
+    case "SERIES":
+      return "Viendo";
+
+    case "BOOK":
+      return "Leyendo";
+
+    case "GAME":
+      return "Jugando";
+  }
+}
+
+function formatShortDate(
+  value:
+    string
+) {
+  try {
+    return new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        day:
+          "numeric",
+
+        month:
+          "short",
+
+        year:
+          "numeric",
+      }
+    ).format(
+      new Date(
+        value
+      )
+    );
+  } catch {
+    return "";
+  }
+}
+
 export default async function PublicProfilePage({
   params,
+  searchParams,
 }: PublicProfilePageProps) {
   const {
     username,
-  } = await params;
+  } =
+    await params;
+
+  const {
+    tab,
+  } =
+    await searchParams;
+
+  const activeTab:
+    MobileTab =
+    isMobileTab(
+      tab
+    )
+      ? tab
+      : "profile";
 
   const supabase =
     await createClient();
 
   const {
-    data: { user },
+    data: {
+      user,
+    },
   } =
     await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect(
+      "/auth"
+    );
   }
 
+  /*
+   * PROFILE
+   */
+
   const {
-    data: profile,
-    error: profileError,
+    data:
+      profileData,
+
+    error:
+      profileError,
   } =
     await supabase
-      .from("profiles")
+      .from(
+        "profiles"
+      )
       .select(`
         id,
         username,
@@ -119,41 +363,55 @@ export default async function PublicProfilePage({
     );
   }
 
-  if (!profile) {
+  if (
+    !profileData
+  ) {
     notFound();
   }
 
-  const typedProfile =
-    profile as Profile;
+  const profile =
+    profileData as Profile;
 
   const displayName =
-    typedProfile.display_name ??
-    typedProfile.username ??
+    profile.display_name ??
+    profile.username ??
     "Usuario";
 
   const isOwnProfile =
-    typedProfile.id ===
+    profile.id ===
     user.id;
+
+  /*
+   * FOLLOW STATUS
+   */
 
   let initialFollowing =
     false;
 
-  if (!isOwnProfile) {
+  if (
+    !isOwnProfile
+  ) {
     const {
-      data: follow,
+      data:
+        followData,
+
       error:
         followError,
     } =
       await supabase
-        .from(FOLLOW_TABLE)
-        .select("follower_id")
+        .from(
+          FOLLOW_TABLE
+        )
+        .select(
+          "following_id"
+        )
         .eq(
           "follower_id",
           user.id
         )
         .eq(
           "following_id",
-          typedProfile.id
+          profile.id
         )
         .maybeSingle();
 
@@ -161,42 +419,66 @@ export default async function PublicProfilePage({
       followError
     ) {
       console.error(
-        "Error checking follow:",
+        "Error checking follow status:",
         followError
       );
     }
 
     initialFollowing =
-      Boolean(follow);
+      Boolean(
+        followData
+      );
   }
+
+  /*
+   * PROFILE DATA
+   */
 
   const [
     followersResult,
     followingResult,
     sectionsResult,
     favoritesResult,
+    libraryResult,
+    reviewsResult,
   ] =
     await Promise.all([
       supabase
-        .from(FOLLOW_TABLE)
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
+        .from(
+          FOLLOW_TABLE
+        )
+        .select(
+          "follower_id",
+          {
+            count:
+              "exact",
+
+            head:
+              true,
+          }
+        )
         .eq(
           "following_id",
-          typedProfile.id
+          profile.id
         ),
 
       supabase
-        .from(FOLLOW_TABLE)
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
+        .from(
+          FOLLOW_TABLE
+        )
+        .select(
+          "following_id",
+          {
+            count:
+              "exact",
+
+            head:
+              true,
+          }
+        )
         .eq(
           "follower_id",
-          typedProfile.id
+          profile.id
         ),
 
       supabase
@@ -210,12 +492,13 @@ export default async function PublicProfilePage({
         `)
         .eq(
           "user_id",
-          typedProfile.id
+          profile.id
         )
         .order(
           "position",
           {
-            ascending: true,
+            ascending:
+              true,
           }
         ),
 
@@ -233,26 +516,72 @@ export default async function PublicProfilePage({
         `)
         .eq(
           "user_id",
-          typedProfile.id
+          profile.id
         )
         .order(
           "position",
           {
-            ascending: true,
+            ascending:
+              true,
+          }
+        ),
+
+      supabase
+        .from(
+          "library_items"
+        )
+        .select(`
+          id,
+          media_type,
+          external_id,
+          title,
+          cover_url,
+          status
+        `)
+        .eq(
+          "user_id",
+          profile.id
+        ),
+
+      supabase
+        .from(
+          "reviews"
+        )
+        .select(`
+          id,
+          media_type,
+          external_id,
+          title,
+          cover_url,
+          created_at
+        `)
+        .eq(
+          "user_id",
+          profile.id
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
           }
         ),
     ]);
 
-  if (followersResult.error) {
+  if (
+    followersResult.error
+  ) {
     console.error(
-      "Error loading followers count:",
+      "Error loading followers:",
       followersResult.error
     );
   }
 
-  if (followingResult.error) {
+  if (
+    followingResult.error
+  ) {
     console.error(
-      "Error loading following count:",
+      "Error loading following:",
       followingResult.error
     );
   }
@@ -261,7 +590,7 @@ export default async function PublicProfilePage({
     sectionsResult.error
   ) {
     console.error(
-      "Error loading public profile sections:",
+      "Error loading profile sections:",
       sectionsResult.error
     );
   }
@@ -270,8 +599,26 @@ export default async function PublicProfilePage({
     favoritesResult.error
   ) {
     console.error(
-      "Error loading public profile favorites:",
+      "Error loading profile favorites:",
       favoritesResult.error
+    );
+  }
+
+  if (
+    libraryResult.error
+  ) {
+    console.error(
+      "Error loading public library:",
+      libraryResult.error
+    );
+  }
+
+  if (
+    reviewsResult.error
+  ) {
+    console.error(
+      "Error loading public reviews:",
+      reviewsResult.error
     );
   }
 
@@ -295,163 +642,861 @@ export default async function PublicProfilePage({
       []
     ) as ProfileFavoriteRow[];
 
+  const library =
+    (
+      libraryResult.data ??
+      []
+    ) as LibraryItemRow[];
+
+  const reviews =
+    (
+      reviewsResult.data ??
+      []
+    ) as ReviewRow[];
+
+  /*
+   * CURRENT / PENDING
+   */
+
+  const currentItems =
+    library
+      .filter(
+        (
+          item
+        ) =>
+          item.status ===
+          "IN_PROGRESS"
+      )
+      .slice(
+        0,
+        4
+      );
+
+  const pendingItems =
+    library.filter(
+      (
+        item
+      ) =>
+        item.status ===
+        "PENDING"
+    );
+
+  /*
+   * COUNTS
+   */
+
+  const registeredMedia =
+    new Map<
+      string,
+      MediaType
+    >();
+
+  for (
+    const item
+    of library
+  ) {
+    registeredMedia.set(
+      `${item.media_type}:${item.external_id}`,
+      item.media_type
+    );
+  }
+
+  for (
+    const review
+    of reviews
+  ) {
+    registeredMedia.set(
+      `${review.media_type}:${review.external_id}`,
+      review.media_type
+    );
+  }
+
+  const mediaCounts: Record<
+    MediaType,
+    number
+  > = {
+    MOVIE:
+      0,
+
+    SERIES:
+      0,
+
+    BOOK:
+      0,
+
+    GAME:
+      0,
+  };
+
+  for (
+    const mediaType
+    of registeredMedia.values()
+  ) {
+    mediaCounts[
+      mediaType
+    ] += 1;
+  }
+
+  const recentReviews =
+    reviews.slice(
+      0,
+      3
+    );
+
+  const safeUsername =
+    profile.username ??
+    username;
+
+  const profilePath =
+    `/profile/${encodeURIComponent(
+      safeUsername
+    )}`;
+
   const connectionsPath =
-    `/profile/${encodeURIComponent(username)}/connections`;
+    `${profilePath}/connections`;
 
   return (
-    <main className="pb-16">
-      <ProfileMediaHeader
-        banner={
-          typedProfile.banner_url ? (
-            <CroppedProfileImage
-              src={
-                typedProfile.banner_url
-              }
-              crop={
-                typedProfile.banner_crop
-              }
-              alt={`Banner de ${displayName}`}
-            />
-          ) : null
-        }
-        avatar={
-          typedProfile.avatar_url ? (
-            <CroppedProfileImage
-              src={
-                typedProfile.avatar_url
-              }
-              crop={
-                typedProfile.avatar_crop
-              }
-              alt={
-                displayName
-              }
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-zinc-500">
-              {displayName
-                .slice(
-                  0,
-                  1
-                )
-                .toUpperCase()}
+    <main className="pb-20">
+      <div className="mx-auto w-full lg:max-w-[1160px]">
+        {/* HEADER */}
+
+        <ProfileMediaHeader
+          banner={
+            profile.banner_url ? (
+              <CroppedProfileImage
+                src={
+                  profile.banner_url
+                }
+                crop={
+                  profile.banner_crop
+                }
+                alt={`Banner de ${displayName}`}
+              />
+            ) : null
+          }
+          avatar={
+            profile.avatar_url ? (
+              <CroppedProfileImage
+                src={
+                  profile.avatar_url
+                }
+                crop={
+                  profile.avatar_crop
+                }
+                alt={
+                  displayName
+                }
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-zinc-500">
+                {displayName
+                  .slice(
+                    0,
+                    1
+                  )
+                  .toUpperCase()}
+              </div>
+            )
+          }
+          action={
+            isOwnProfile ? (
+              <Link
+                href="/profile/customize"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
+              >
+                <Settings2
+                  size={15}
+                />
+
+                <span className="hidden sm:inline">
+                  Editar perfil
+                </span>
+
+                <span className="sm:hidden">
+                  Editar
+                </span>
+              </Link>
+            ) : (
+              <FollowButton
+                currentUserId={
+                  user.id
+                }
+                targetUserId={
+                  profile.id
+                }
+                initialFollowing={
+                  initialFollowing
+                }
+              />
+            )
+          }
+        >
+          <div className="text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-100 lg:text-[28px]">
+                {
+                  displayName
+                }
+              </h1>
+
+              {profile.special_role ===
+                "OWNER" && (
+                <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-300 lg:text-[11px]">
+                  Owner
+                </span>
+              )}
+
+              {profile.special_role ===
+                "BETA_TESTER" && (
+                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400 lg:text-[11px]">
+                  Beta Tester
+                </span>
+              )}
             </div>
-          )
-        }
-      >
-        {/* ACCIÓN */}
-        <div className="flex justify-end">
-          {isOwnProfile ? (
-            <Link
-              href="/profile/customize"
-              className="inline-flex rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
-            >
-              Personalizar perfil
-            </Link>
-          ) : (
-            <FollowButton
-              currentUserId={
-                user.id
-              }
-              targetUserId={
-                typedProfile.id
-              }
-              initialFollowing={
-                initialFollowing
-              }
-            />
+
+            {profile.username && (
+              <p className="mt-0.5 text-sm text-zinc-500">
+                @
+                {
+                  profile.username
+                }
+              </p>
+            )}
+
+            {profile.bio?.trim() ? (
+              <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
+                {
+                  profile.bio
+                }
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap items-center gap-5 text-sm">
+              <Link
+                href={`${connectionsPath}?tab=following`}
+                className="group"
+              >
+                <span className="font-semibold text-zinc-200 transition group-hover:text-white">
+                  {
+                    followingCount
+                  }
+                </span>
+
+                <span className="ml-1.5 text-zinc-500 transition group-hover:text-zinc-300">
+                  Siguiendo
+                </span>
+              </Link>
+
+              <Link
+                href={`${connectionsPath}?tab=followers`}
+                className="group"
+              >
+                <span className="font-semibold text-zinc-200 transition group-hover:text-white">
+                  {
+                    followersCount
+                  }
+                </span>
+
+                <span className="ml-1.5 text-zinc-500 transition group-hover:text-zinc-300">
+                  Seguidores
+                </span>
+              </Link>
+            </div>
+          </div>
+        </ProfileMediaHeader>
+
+        {/* MOBILE / TABLET TABS */}
+
+        <nav className="mt-6 grid w-full grid-cols-3 border-y border-zinc-800 lg:hidden">
+          <MobileTabLink
+            href={`${profilePath}?tab=profile`}
+            active={
+              activeTab ===
+              "profile"
+            }
+          >
+            Perfil
+          </MobileTabLink>
+
+          <MobileTabLink
+            href={`${profilePath}?tab=activity`}
+            active={
+              activeTab ===
+              "activity"
+            }
+          >
+            Actividad reciente
+          </MobileTabLink>
+
+          <MobileTabLink
+            href={`${profilePath}?tab=pending`}
+            active={
+              activeTab ===
+              "pending"
+            }
+          >
+            Pendientes
+          </MobileTabLink>
+        </nav>
+
+        {/* MOBILE / TABLET */}
+
+        <div className="px-4 pt-7 lg:hidden">
+          {activeTab ===
+            "profile" &&
+            profile.username && (
+              <ProfileSections
+                profileUserId={
+                  profile.id
+                }
+                username={
+                  profile.username
+                }
+                sections={
+                  sections
+                }
+                favorites={
+                  favorites
+                }
+                includeActivity={
+                  false
+                }
+              />
+            )}
+
+          {activeTab ===
+            "activity" &&
+            profile.username && (
+              <section>
+                <MobileSectionTitle>
+                  Actividad reciente
+                </MobileSectionTitle>
+
+                <ProfileActivity
+                  profileUserId={
+                    profile.id
+                  }
+                  username={
+                    profile.username
+                  }
+                  mode="preview"
+                />
+              </section>
+            )}
+
+          {activeTab ===
+            "pending" && (
+            <section>
+              <MobileSectionTitle>
+                Pendientes
+              </MobileSectionTitle>
+
+              <PendingGrid
+                items={
+                  pendingItems
+                }
+              />
+            </section>
           )}
         </div>
 
-        {/* INFORMACIÓN */}
-        <div className="mt-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[clamp(24px,5vw,30px)] font-bold leading-tight text-zinc-100">
-              {displayName}
-            </h1>
+        {/* DESKTOP */}
 
-            {typedProfile.special_role ===
-              "OWNER" && (
-              <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2.5 py-1 text-xs font-medium text-fuchsia-300">
-                Owner
-              </span>
-            )}
+        <div className="mt-9 hidden items-start gap-10 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_270px] xl:grid-cols-[minmax(0,1fr)_290px]">
+          {/* MAIN */}
 
-            {typedProfile.special_role ===
-              "BETA_TESTER" && (
-              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-400">
-                Beta Tester
-              </span>
+          <div className="min-w-0">
+            {profile.username && (
+              <ProfileSections
+                profileUserId={
+                  profile.id
+                }
+                username={
+                  profile.username
+                }
+                sections={
+                  sections
+                }
+                favorites={
+                  favorites
+                }
+              />
             )}
           </div>
 
-          {typedProfile.username && (
-            <p className="mt-1 text-zinc-500">
-              @
-              {
-                typedProfile.username
-              }
-            </p>
-          )}
+          {/* SIDEBAR */}
 
-          {typedProfile.bio ? (
-            <p className="mt-5 max-w-2xl whitespace-pre-wrap leading-7 text-zinc-300">
-              {
-                typedProfile.bio
-              }
-            </p>
-          ) : (
-            <p className="mt-5 text-zinc-600">
-              Sin biografía.
-            </p>
-          )}
-
-          {/* SEGUIDORES / SIGUIENDO */}
-          <div className="mt-5 flex flex-wrap gap-5 text-sm text-zinc-500">
-            <Link
-              href={`${connectionsPath}?tab=following`}
-              className="transition hover:text-zinc-200"
+          <aside className="space-y-8 lg:sticky lg:top-24">
+            <SidebarSection
+              title="Estadísticas"
             >
-              <strong className="font-semibold text-zinc-200">
-                {
-                  followingCount
-                }
-              </strong>{" "}
-              Siguiendo
-            </Link>
+              <div className="divide-y divide-zinc-900">
+                <StatRow
+                  icon={
+                    <Library
+                      size={14}
+                    />
+                  }
+                  label="Registrados"
+                  value={
+                    registeredMedia.size
+                  }
+                />
 
-            <Link
-              href={`${connectionsPath}?tab=followers`}
-              className="transition hover:text-zinc-200"
+                <StatRow
+                  icon={
+                    <Clapperboard
+                      size={14}
+                    />
+                  }
+                  label="Películas"
+                  value={
+                    mediaCounts.MOVIE
+                  }
+                />
+
+                <StatRow
+                  icon={
+                    <Tv
+                      size={14}
+                    />
+                  }
+                  label="Series"
+                  value={
+                    mediaCounts.SERIES
+                  }
+                />
+
+                <StatRow
+                  icon={
+                    <Gamepad2
+                      size={14}
+                    />
+                  }
+                  label="Juegos"
+                  value={
+                    mediaCounts.GAME
+                  }
+                />
+
+                <StatRow
+                  icon={
+                    <BookOpen
+                      size={14}
+                    />
+                  }
+                  label="Libros"
+                  value={
+                    mediaCounts.BOOK
+                  }
+                />
+
+                <StatRow
+                  icon={
+                    <Heart
+                      size={14}
+                    />
+                  }
+                  label="Reviews"
+                  value={
+                    reviews.length
+                  }
+                />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between border-t border-zinc-900 pt-3 text-xs">
+                <span className="text-zinc-600">
+                  Pendientes
+                </span>
+
+                <span className="font-medium text-zinc-400">
+                  {
+                    pendingItems.length
+                  }
+                </span>
+              </div>
+            </SidebarSection>
+
+            <SidebarSection
+              title="Ahora mismo"
             >
-              <strong className="font-semibold text-zinc-200">
-                {
-                  followersCount
-                }
-              </strong>{" "}
-              Seguidores
-            </Link>
-          </div>
+              {currentItems.length >
+              0 ? (
+                <div className="space-y-3">
+                  {currentItems.map(
+                    (
+                      item
+                    ) => (
+                      <Link
+                        key={
+                          item.id
+                        }
+                        href={getMediaHref(
+                          item.media_type,
+                          item.external_id
+                        )}
+                        className="group flex items-center gap-3"
+                      >
+                        {item.cover_url ? (
+                          <Image
+                            src={
+                              item.cover_url
+                            }
+                            alt={
+                              item.title
+                            }
+                            width={80}
+                            height={120}
+                            unoptimized={
+                              shouldUseOriginalImage(
+                                item.cover_url
+                              )
+                            }
+                            className="h-14 w-10 shrink-0 object-cover"
+                          />
+                        ) : (
+                          <div className="h-14 w-10 shrink-0 bg-zinc-900" />
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                            {
+                              item.title
+                            }
+                          </p>
+
+                          <p className="mt-1 text-xs text-zinc-600">
+                            {getCurrentLabel(
+                              item.media_type
+                            )}
+                          </p>
+                        </div>
+                      </Link>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-zinc-600">
+                  No hay ningún medio en curso.
+                </p>
+              )}
+            </SidebarSection>
+
+            <SidebarSection
+              title="Reviews recientes"
+            >
+              {recentReviews.length >
+              0 ? (
+                <div className="space-y-4">
+                  {recentReviews.map(
+                    (
+                      review
+                    ) => (
+                      <Link
+                        key={
+                          review.id
+                        }
+                        href={getMediaHref(
+                          review.media_type,
+                          review.external_id
+                        )}
+                        className="group flex gap-3"
+                      >
+                        {review.cover_url ? (
+                          <Image
+                            src={
+                              review.cover_url
+                            }
+                            alt={
+                              review.title
+                            }
+                            width={80}
+                            height={120}
+                            unoptimized={
+                              shouldUseOriginalImage(
+                                review.cover_url
+                              )
+                            }
+                            className="h-14 w-10 shrink-0 object-cover"
+                          />
+                        ) : (
+                          <div className="h-14 w-10 shrink-0 bg-zinc-900" />
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                            {
+                              review.title
+                            }
+                          </p>
+
+                          <p className="mt-1 text-xs text-zinc-600">
+                            {getMediaLabel(
+                              review.media_type
+                            )}
+                          </p>
+
+                          <p className="mt-0.5 text-[11px] text-zinc-700">
+                            {formatShortDate(
+                              review.created_at
+                            )}
+                          </p>
+                        </div>
+                      </Link>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-600">
+                  Todavía no hay reviews.
+                </p>
+              )}
+            </SidebarSection>
+
+            <SidebarSection
+              title="Social"
+            >
+              <div className="space-y-3 text-sm">
+                <Link
+                  href={`${connectionsPath}?tab=followers`}
+                  className="flex items-center justify-between text-zinc-500 transition hover:text-zinc-300"
+                >
+                  <span>
+                    Seguidores
+                  </span>
+
+                  <span className="font-medium text-zinc-300">
+                    {
+                      followersCount
+                    }
+                  </span>
+                </Link>
+
+                <Link
+                  href={`${connectionsPath}?tab=following`}
+                  className="flex items-center justify-between text-zinc-500 transition hover:text-zinc-300"
+                >
+                  <span>
+                    Siguiendo
+                  </span>
+
+                  <span className="font-medium text-zinc-300">
+                    {
+                      followingCount
+                    }
+                  </span>
+                </Link>
+
+                <div className="flex items-center justify-between border-t border-zinc-900 pt-3 text-zinc-500">
+                  <span>
+                    Favoritos
+                  </span>
+
+                  <span className="font-medium text-zinc-300">
+                    {
+                      favorites.length
+                    }
+                  </span>
+                </div>
+              </div>
+            </SidebarSection>
+          </aside>
         </div>
-      </ProfileMediaHeader>
-
-      {/* SECCIONES CONFIGURABLES */}
-      {typedProfile.username && (
-        <ProfileSections
-          profileUserId={
-            typedProfile.id
-          }
-          username={
-            typedProfile.username
-          }
-          sections={
-            sections
-          }
-          favorites={
-            favorites
-          }
-        />
-      )}
+      </div>
     </main>
+  );
+}
+
+function MobileTabLink({
+  href,
+  active,
+  children,
+}: {
+  href:
+    string;
+
+  active:
+    boolean;
+
+  children:
+    ReactNode;
+}) {
+  return (
+    <Link
+      href={
+        href
+      }
+      scroll={
+        false
+      }
+      className={`relative flex min-h-[52px] items-center justify-center px-2 text-center text-[13px] font-medium leading-4 transition ${
+        active
+          ? "text-zinc-100"
+          : "text-zinc-600 hover:text-zinc-300"
+      }`}
+    >
+      {
+        children
+      }
+
+      {active && (
+        <span className="absolute inset-x-0 bottom-0 h-[2px] bg-fuchsia-500" />
+      )}
+    </Link>
+  );
+}
+
+function MobileSectionTitle({
+  children,
+}: {
+  children:
+    ReactNode;
+}) {
+  return (
+    <div className="mb-4 border-b border-zinc-800 pb-2.5">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        {
+          children
+        }
+      </h2>
+    </div>
+  );
+}
+
+function PendingGrid({
+  items,
+}: {
+  items:
+    LibraryItemRow[];
+}) {
+  if (
+    items.length ===
+    0
+  ) {
+    return (
+      <p className="py-10 text-center text-sm text-zinc-600">
+        No hay nada pendiente.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
+      {items.map(
+        (
+          item
+        ) => (
+          <Link
+            key={
+              item.id
+            }
+            href={getMediaHref(
+              item.media_type,
+              item.external_id
+            )}
+            className="group min-w-0"
+          >
+            <div className="aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
+              {item.cover_url ? (
+                <Image
+                  src={
+                    item.cover_url
+                  }
+                  alt={
+                    item.title
+                  }
+                  width={500}
+                  height={750}
+                  unoptimized={
+                    shouldUseOriginalImage(
+                      item.cover_url
+                    )
+                  }
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-zinc-600">
+                  Sin portada
+                </div>
+              )}
+            </div>
+
+            <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-zinc-500">
+              {
+                item.title
+              }
+            </p>
+          </Link>
+        )
+      )}
+    </div>
+  );
+}
+
+function SidebarSection({
+  title,
+  children,
+}: {
+  title:
+    string;
+
+  children:
+    ReactNode;
+}) {
+  return (
+    <section>
+      <div className="border-b border-zinc-800 pb-2.5">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {
+            title
+          }
+        </h2>
+      </div>
+
+      <div className="mt-4">
+        {
+          children
+        }
+      </div>
+    </section>
+  );
+}
+
+function StatRow({
+  icon,
+  label,
+  value,
+}: {
+  icon:
+    ReactNode;
+
+  label:
+    string;
+
+  value:
+    number;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2.5">
+      <div className="flex items-center gap-2 text-sm text-zinc-500">
+        <span className="text-zinc-600">
+          {
+            icon
+          }
+        </span>
+
+        <span>
+          {
+            label
+          }
+        </span>
+      </div>
+
+      <span className="text-sm font-medium tabular-nums text-zinc-300">
+        {
+          value
+        }
+      </span>
+    </div>
   );
 }

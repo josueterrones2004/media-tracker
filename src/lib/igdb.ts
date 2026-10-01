@@ -25,9 +25,23 @@ export type IGDBImage = {
   image_id: string;
 };
 
-export type IGDBGame = {
+export type IGDBAlternativeName = {
   id: number;
   name: string;
+};
+
+export type IGDBGameType = {
+  id?: number;
+  type?: string;
+};
+
+export type IGDBGame = {
+  id: number;
+
+  name: string;
+
+  alternative_names?:
+    IGDBAlternativeName[];
 
   summary?: string;
 
@@ -46,6 +60,12 @@ export type IGDBGame = {
   platforms?:
     IGDBNamedItem[];
 
+  game_type?:
+    IGDBGameType;
+
+  version_parent?:
+    number;
+
   total_rating?:
     number;
 
@@ -56,6 +76,10 @@ export type IGDBGame = {
 let cachedToken:
   | CachedToken
   | null = null;
+
+/*
+ * CREDENTIALS
+ */
 
 function getCredentials() {
   const clientId =
@@ -81,11 +105,22 @@ function getCredentials() {
   };
 }
 
+/*
+ * TWITCH ACCESS TOKEN
+ */
+
 async function getAccessToken() {
+  /*
+   * Reutilizamos el token mientras
+   * todavía tenga al menos 1 minuto
+   * de vida.
+   */
+
   if (
     cachedToken &&
     cachedToken.expiresAt >
-      Date.now() + 60_000
+      Date.now() +
+        60_000
   ) {
     return cachedToken.accessToken;
   }
@@ -93,7 +128,8 @@ async function getAccessToken() {
   const {
     clientId,
     clientSecret,
-  } = getCredentials();
+  } =
+    getCredentials();
 
   const params =
     new URLSearchParams({
@@ -111,12 +147,17 @@ async function getAccessToken() {
     await fetch(
       `${TWITCH_TOKEN_URL}?${params.toString()}`,
       {
-        method: "POST",
-        cache: "no-store",
+        method:
+          "POST",
+
+        cache:
+          "no-store",
       }
     );
 
-  if (!response.ok) {
+  if (
+    !response.ok
+  ) {
     const errorText =
       await response.text();
 
@@ -126,7 +167,9 @@ async function getAccessToken() {
   }
 
   const data =
-    (await response.json()) as TwitchTokenResponse;
+    (
+      await response.json()
+    ) as TwitchTokenResponse;
 
   cachedToken = {
     accessToken:
@@ -141,13 +184,21 @@ async function getAccessToken() {
   return data.access_token;
 }
 
+/*
+ * IGDB REQUEST
+ */
+
 async function requestIGDB<T>(
-  endpoint: string,
-  body: string
+  endpoint:
+    string,
+
+  body:
+    string
 ): Promise<T> {
   const {
     clientId,
-  } = getCredentials();
+  } =
+    getCredentials();
 
   const accessToken =
     await getAccessToken();
@@ -156,7 +207,8 @@ async function requestIGDB<T>(
     await fetch(
       `${IGDB_BASE_URL}/${endpoint}`,
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
           "Client-ID":
@@ -171,11 +223,14 @@ async function requestIGDB<T>(
 
         body,
 
-        cache: "no-store",
+        cache:
+          "no-store",
       }
     );
 
-  if (!response.ok) {
+  if (
+    !response.ok
+  ) {
     const errorText =
       await response.text();
 
@@ -187,12 +242,23 @@ async function requestIGDB<T>(
   return response.json();
 }
 
+/*
+ * SEARCH QUERY ESCAPE
+ */
+
 function escapeSearchQuery(
-  query: string
+  query:
+    string
 ) {
   return query
-    .replaceAll("\\", "\\\\")
-    .replaceAll('"', '\\"')
+    .replaceAll(
+      "\\",
+      "\\\\"
+    )
+    .replaceAll(
+      '"',
+      '\\"'
+    )
     .replaceAll(
       /\s+/g,
       " "
@@ -200,40 +266,236 @@ function escapeSearchQuery(
     .trim();
 }
 
+/*
+ * GAME TYPE NORMALIZATION
+ */
+
+export function normalizeIGDBGameType(
+  value:
+    | string
+    | null
+    | undefined
+) {
+  return (
+    value
+      ?.normalize(
+        "NFD"
+      )
+      .replace(
+        /[\u0300-\u036f]/g,
+        ""
+      )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        "_"
+      )
+      .replace(
+        /^_+|_+$/g,
+        ""
+      ) ??
+    ""
+  );
+}
+
+/*
+ * HUMAN-READABLE GAME TYPE
+ */
+
+export function getIGDBGameTypeLabel(
+  game:
+    IGDBGame
+) {
+  const type =
+    normalizeIGDBGameType(
+      game.game_type
+        ?.type
+    );
+
+  if (
+    type ===
+    "dlc_addon"
+  ) {
+    return "DLC";
+  }
+
+  if (
+    type ===
+    "expansion"
+  ) {
+    return "Expansión";
+  }
+
+  if (
+    type ===
+    "standalone_expansion"
+  ) {
+    return "Expansión independiente";
+  }
+
+  if (
+    type ===
+    "remake"
+  ) {
+    return "Remake";
+  }
+
+  if (
+    type ===
+    "remaster"
+  ) {
+    return "Remaster";
+  }
+
+  if (
+    type ===
+    "expanded_game"
+  ) {
+    return "Edición expandida";
+  }
+
+  return "Juego";
+}
+
+/*
+ * SEARCH FILTER
+ */
+
+function shouldShowGame(
+  game:
+    IGDBGame
+) {
+  /*
+   * Si tiene version_parent, normalmente
+   * es una edición/versión de otro juego:
+   *
+   * Collector's Edition
+   * Day One Edition
+   * Complete Edition
+   * etc.
+   */
+
+  if (
+    game.version_parent
+  ) {
+    return false;
+  }
+
+  const type =
+    normalizeIGDBGameType(
+      game.game_type
+        ?.type
+    );
+
+  /*
+   * Si por algún motivo IGDB no devuelve
+   * el tipo, conservamos el resultado
+   * antes que ocultar un juego válido.
+   */
+
+  if (
+    !type
+  ) {
+    return true;
+  }
+
+  /*
+   * Tipos que sí queremos en la búsqueda.
+   */
+
+  const allowedTypes =
+    new Set([
+      "main_game",
+      "dlc_addon",
+      "expansion",
+      "standalone_expansion",
+      "remake",
+      "remaster",
+      "expanded_game",
+    ]);
+
+  return allowedTypes.has(
+    type
+  );
+}
+
+/*
+ * GAME SEARCH
+ */
+
 export async function searchIGDBGames(
-  query: string
+  query:
+    string
 ) {
   const cleanQuery =
     escapeSearchQuery(
       query
     );
 
-  if (!cleanQuery) {
+  if (
+    !cleanQuery
+  ) {
     return [];
   }
 
-  return requestIGDB<
-    IGDBGame[]
-  >(
-    "games",
-    `
-      search "${cleanQuery}";
-      fields
-        id,
-        name,
-        cover.image_id,
-        first_release_date,
-        genres.name,
-        platforms.name;
-      limit 20;
-    `
-  );
+  /*
+   * Pedimos más de 20 porque después
+   * filtramos versiones y categorías
+   * que no nos interesan.
+   */
+
+  const games =
+    await requestIGDB<
+      IGDBGame[]
+    >(
+      "games",
+      `
+        search "${cleanQuery}";
+        fields
+          id,
+          name,
+          alternative_names.name,
+          cover.image_id,
+          first_release_date,
+          genres.name,
+          platforms.name,
+          game_type.type,
+          version_parent,
+          total_rating,
+          total_rating_count;
+        where version_parent = null;
+        limit 50;
+      `
+    );
+
+  /*
+   * Eliminamos bundles, mods, packs,
+   * updates y demás ruido.
+   */
+
+  return games
+    .filter(
+      shouldShowGame
+    )
+    .slice(
+      0,
+      30
+    );
 }
 
+/*
+ * GAME DETAILS
+ */
+
 export async function getIGDBGame(
-  id: string
+  id:
+    string
 ) {
-  if (!/^\d+$/.test(id)) {
+  if (
+    !/^\d+$/.test(
+      id
+    )
+  ) {
     return null;
   }
 
@@ -246,12 +508,15 @@ export async function getIGDBGame(
         fields
           id,
           name,
+          alternative_names.name,
           summary,
           first_release_date,
           cover.image_id,
           screenshots.image_id,
           genres.name,
           platforms.name,
+          game_type.type,
+          version_parent,
           total_rating,
           total_rating_count;
         where id = ${id};
@@ -259,37 +524,53 @@ export async function getIGDBGame(
       `
     );
 
-  return games[0] ??
-    null;
+  return (
+    games[0] ??
+    null
+  );
 }
+
+/*
+ * IMAGE
+ */
 
 export function getIGDBImageUrl(
   imageId:
     | string
     | undefined,
+
   size:
     | "cover_big"
     | "screenshot_big"
     | "1080p" =
       "cover_big"
 ) {
-  if (!imageId) {
+  if (
+    !imageId
+  ) {
     return null;
   }
 
   return `https://images.igdb.com/igdb/image/upload/t_${size}/${imageId}.jpg`;
 }
 
+/*
+ * RELEASE YEAR
+ */
+
 export function getIGDBReleaseYear(
   timestamp:
     | number
     | undefined
 ) {
-  if (!timestamp) {
+  if (
+    !timestamp
+  ) {
     return null;
   }
 
   return new Date(
-    timestamp * 1000
+    timestamp *
+      1000
   ).getUTCFullYear();
 }

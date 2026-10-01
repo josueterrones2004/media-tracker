@@ -1,13 +1,22 @@
-import Image from "next/image";
-import { notFound } from "next/navigation";
+import {
+  CalendarDays,
+  Gamepad2,
+  Monitor,
+} from "lucide-react";
+
+import {
+  notFound,
+} from "next/navigation";
+
+import MediaDetailLayout from "@/components/media/MediaDetailLayout";
 
 import {
   getIGDBGame,
+  getIGDBGameTypeLabel,
   getIGDBImageUrl,
   getIGDBReleaseYear,
+  normalizeIGDBGameType,
 } from "@/lib/igdb";
-
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
 
 import GameActions from "./GameActions";
 
@@ -17,18 +26,59 @@ interface GamePageProps {
   }>;
 }
 
+function getGameTypeLabel(
+  game: NonNullable<
+    Awaited<
+      ReturnType<
+        typeof getIGDBGame
+      >
+    >
+  >
+) {
+  const type =
+    normalizeIGDBGameType(
+      game.game_type?.type
+    );
+
+  if (
+    type ===
+    "main_game"
+  ) {
+    return "Juego principal";
+  }
+
+  if (
+    type ===
+    "expanded_game"
+  ) {
+    return "Edición expandida";
+  }
+
+  return getIGDBGameTypeLabel(
+    game
+  );
+}
+
 export default async function GamePage({
   params,
 }: GamePageProps) {
-  const { id } =
+  const {
+    id,
+  } =
     await params;
 
   const game =
-    await getIGDBGame(id);
+    await getIGDBGame(
+      id
+    );
 
   if (!game) {
     notFound();
   }
+
+  /*
+   * IMAGES
+   */
 
   const cover =
     getIGDBImageUrl(
@@ -43,151 +93,195 @@ export default async function GamePage({
       "1080p"
     );
 
+  /*
+   * BASIC INFORMATION
+   */
+
   const releaseYear =
     getIGDBReleaseYear(
       game.first_release_date
     );
 
-  return (
-    <main className="mx-auto max-w-6xl pb-20">
-      {/* BACKDROP */}
+  const gameType =
+    getGameTypeLabel(
+      game
+    );
 
-      <div className="relative h-[320px] overflow-hidden rounded-2xl bg-zinc-900">
-        {backdrop && (
-          <Image
-            src={backdrop}
-            alt=""
-            fill
-            priority
-            unoptimized={
-              shouldUseOriginalImage(
-                backdrop
-              )
-            }
-            sizes="(max-width: 1200px) 100vw, 1200px"
-            className="object-cover"
-          />
-        )}
+  const platforms =
+    game.platforms ??
+    [];
 
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-      </div>
+  const genres =
+    game.genres ??
+    [];
 
-      <div className="relative -mt-24 px-4 md:px-8">
-        <div className="flex flex-col gap-8 md:flex-row md:items-end">
-          {/* COVER */}
+  /*
+   * HERO META
+   */
 
-          <div className="relative z-10 w-48 shrink-0 md:w-56">
-            {cover ? (
-              <Image
-                src={cover}
-                alt={game.name}
-                width={500}
-                height={750}
-                priority
-                unoptimized={
-                  shouldUseOriginalImage(
-                    cover
-                  )
-                }
-                className="aspect-[2/3] w-full rounded-xl border-4 border-zinc-950 object-cover shadow-2xl"
+  const meta: string[] =
+    [];
+
+  if (
+    releaseYear
+  ) {
+    meta.push(
+      String(
+        releaseYear
+      )
+    );
+  }
+
+  if (
+    platforms.length >
+    0
+  ) {
+    meta.push(
+      platforms
+        .slice(
+          0,
+          5
+        )
+        .map(
+          (
+            platform
+          ) =>
+            platform.name
+        )
+        .join(
+          ", "
+        )
+    );
+  }
+
+  /*
+   * TAGS
+   */
+
+  const tags =
+    genres.map(
+      (
+        genre
+      ) =>
+        genre.name
+    );
+
+  /*
+   * INFORMATION SIDEBAR
+   */
+
+  const information = [
+    ...(releaseYear
+      ? [
+          {
+            label:
+              "Lanzamiento",
+
+            value:
+              String(
+                releaseYear
+              ),
+
+            icon: (
+              <CalendarDays
+                size={15}
               />
-            ) : (
-              <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl border-4 border-zinc-950 bg-zinc-900 px-4 text-center text-zinc-500">
-                Sin imagen
-              </div>
-            )}
-          </div>
+            ),
+          },
+        ]
+      : []),
 
-          {/* INFORMATION */}
+    {
+      label:
+        "Tipo",
 
-          <div className="pb-4">
-            <h1 className="text-4xl font-bold tracking-tight text-zinc-100">
-              {game.name}
-            </h1>
+      value:
+        gameType,
 
-            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-zinc-400">
-              {releaseYear && (
-                <span>
-                  {releaseYear}
-                </span>
-              )}
+      icon: (
+        <Gamepad2
+          size={15}
+        />
+      ),
+    },
 
-              {game.platforms &&
-                game.platforms.length >
-                  0 && (
-                  <>
-                    {releaseYear && (
-                      <span>·</span>
-                    )}
+    ...(platforms.length >
+    0
+      ? [
+          {
+            label:
+              "Plataformas",
 
-                    <span>
-                      {game.platforms
-                        .slice(0, 4)
-                        .map(
-                          (
-                            platform
-                          ) =>
-                            platform.name
-                        )
-                        .join(", ")}
-                    </span>
-                  </>
-                )}
-            </div>
+            value:
+              platforms
+                .map(
+                  (
+                    platform
+                  ) =>
+                    platform.name
+                )
+                .join(
+                  ", "
+                ),
 
-            {game.genres &&
-              game.genres.length >
-                0 && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {game.genres.map(
-                    (genre) => (
-                      <span
-                        key={
-                          genre.id
-                        }
-                        className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm text-zinc-300"
-                      >
-                        {
-                          genre.name
-                        }
-                      </span>
-                    )
-                  )}
-                </div>
-              )}
-          </div>
-        </div>
+            icon: (
+              <Monitor
+                size={15}
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
 
-        {/* DESCRIPTION */}
-
-        <section className="mt-10 max-w-4xl">
-          <h2 className="text-xl font-semibold text-zinc-100">
-            Sinopsis
-          </h2>
-
-          <p className="mt-4 whitespace-pre-line leading-7 text-zinc-300">
-            {game.summary ||
-              "No hay descripción disponible para este juego."}
-          </p>
-        </section>
-
-        {/* ACTIONS */}
-
-        <GameActions
-          game={{
-            id: String(
+  return (
+    <MediaDetailLayout
+      title={
+        game.name
+      }
+      eyebrow={
+        gameType
+      }
+      coverUrl={
+        cover
+      }
+      backdropUrl={
+        backdrop
+      }
+      meta={
+        meta
+      }
+      tags={
+        tags
+      }
+      description={
+        game.summary ??
+        null
+      }
+      noDescriptionText="No hay una sinopsis disponible para este juego."
+      information={
+        information
+      }
+    >
+      <GameActions
+        game={{
+          id:
+            String(
               game.id
             ),
-            title:
-              game.name,
-            coverUrl:
-              cover,
-            backdropUrl:
-              backdrop,
-            releaseYear,
-          }}
-        />
-      </div>
-    </main>
+
+          title:
+            game.name,
+
+          coverUrl:
+            cover,
+
+          backdropUrl:
+            backdrop,
+
+          releaseYear,
+        }}
+      />
+    </MediaDetailLayout>
   );
 }

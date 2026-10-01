@@ -1,18 +1,13 @@
 "use client";
 
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import Image from "next/image";
-
-import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
 import {
   BookOpen,
+  Eye,
+  Gamepad2,
   Heart,
   HeartCrack,
   Pencil,
-  RotateCcw,
+  Repeat2,
   Save,
   ShieldAlert,
   ShieldCheck,
@@ -20,33 +15,57 @@ import {
   X,
 } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
+import Link from "next/link";
 
-type Review = {
+import { useRouter } from "next/navigation";
+import { type ReactNode, useState } from "react";
+
+import StarRating from "@/components/media/StarRating";
+
+import {
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+type MediaType =
+  | "SERIES"
+  | "BOOK"
+  | "GAME";
+
+export type LibraryReview = {
   id: string;
   external_id: string;
   title: string;
+
   cover_url: string | null;
+  release_year: number | null;
+
+  rating: number | null;
 
   liked: boolean;
   is_rewatch: boolean;
   contains_spoilers: boolean;
 
-  show_consumed_date: boolean;
   consumed_at: string;
 
-  review_text: string;
+  review_text: string | null;
 };
 
-export default function ReviewModalCard({
+export default function LibraryReviewModalCard({
   review,
+  mediaType,
 }: {
-  review: Review;
+  review: LibraryReview;
+  mediaType: MediaType;
 }) {
   const router = useRouter();
 
-  const [supabase] = useState(() =>
-    createClient()
+  const [supabase] = useState(
+    () => createClient()
   );
 
   const [open, setOpen] =
@@ -58,23 +77,35 @@ export default function ReviewModalCard({
   const [loading, setLoading] =
     useState(false);
 
+  const [
+    confirmDelete,
+    setConfirmDelete,
+  ] = useState(false);
+
   const [message, setMessage] =
     useState("");
 
-  const [reviewText, setReviewText] =
-    useState(
-      review.review_text
+  const [
+    reviewText,
+    setReviewText,
+  ] = useState(
+    review.review_text ?? ""
+  );
+
+  const [rating, setRating] =
+    useState<number | null>(
+      review.rating
     );
 
   const [liked, setLiked] =
-    useState(
-      review.liked
-    );
+    useState(review.liked);
 
-  const [isReread, setIsReread] =
-    useState(
-      review.is_rewatch
-    );
+  const [
+    isRepeat,
+    setIsRepeat,
+  ] = useState(
+    review.is_rewatch
+  );
 
   const [
     containsSpoilers,
@@ -82,11 +113,6 @@ export default function ReviewModalCard({
   ] = useState(
     review.contains_spoilers
   );
-
-  const [showDate, setShowDate] =
-    useState(
-      review.show_consumed_date
-    );
 
   const [
     spoilersRevealed,
@@ -99,7 +125,7 @@ export default function ReviewModalCard({
     date: string
   ) {
     return new Intl.DateTimeFormat(
-      "en-GB",
+      "es-MX",
       {
         day: "2-digit",
         month: "short",
@@ -112,105 +138,190 @@ export default function ReviewModalCard({
     );
   }
 
-  function openModal() {
-    setEditing(false);
+  function getRoute() {
+    if (
+      mediaType === "SERIES"
+    ) {
+      return `/series/${review.external_id}`;
+    }
 
+    if (
+      mediaType === "BOOK"
+    ) {
+      return `/books/${review.external_id}`;
+    }
+
+    return `/games/${review.external_id}`;
+  }
+
+  function getDateLabel() {
+    if (
+      mediaType === "BOOK"
+    ) {
+      return "Leído el";
+    }
+
+    if (
+      mediaType === "GAME"
+    ) {
+      return "Completado el";
+    }
+
+    return "Vista el";
+  }
+
+  function getRepeatLabel() {
+    if (
+      mediaType === "BOOK"
+    ) {
+      return isRepeat
+        ? "Relectura"
+        : "Primera lectura";
+    }
+
+    if (
+      mediaType === "GAME"
+    ) {
+      return isRepeat
+        ? "Replay"
+        : "Primera partida";
+    }
+
+    return isRepeat
+      ? "Rewatch"
+      : "Primera vez";
+  }
+
+  function getRepeatIcon() {
+    if (isRepeat) {
+      return (
+        <Repeat2 size={30} />
+      );
+    }
+
+    if (
+      mediaType === "BOOK"
+    ) {
+      return (
+        <BookOpen size={30} />
+      );
+    }
+
+    if (
+      mediaType === "GAME"
+    ) {
+      return (
+        <Gamepad2 size={30} />
+      );
+    }
+
+    return <Eye size={30} />;
+  }
+
+  function getExperience() {
+    if (!isRepeat) {
+      return "FIRST_TIME";
+    }
+
+    if (
+      mediaType === "BOOK"
+    ) {
+      return "REREAD";
+    }
+
+    if (
+      mediaType === "GAME"
+    ) {
+      return "REPLAY";
+    }
+
+    return "REWATCH";
+  }
+
+  function resetValues() {
     setReviewText(
-      review.review_text
+      review.review_text ?? ""
+    );
+
+    setRating(
+      review.rating
     );
 
     setLiked(
       review.liked
     );
 
-    setIsReread(
+    setIsRepeat(
       review.is_rewatch
     );
 
     setContainsSpoilers(
       review.contains_spoilers
     );
+  }
 
-    setShowDate(
-      review.show_consumed_date
-    );
+  function openModal() {
+    resetValues();
+
+    setEditing(false);
+    setConfirmDelete(false);
+    setMessage("");
 
     setSpoilersRevealed(
       !review.contains_spoilers
     );
 
-    setMessage("");
-
     setOpen(true);
   }
 
   function closeModal() {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
 
     setOpen(false);
     setEditing(false);
+    setConfirmDelete(false);
     setMessage("");
   }
 
   function cancelEditing() {
-    setReviewText(
-      review.review_text
-    );
-
-    setLiked(
-      review.liked
-    );
-
-    setIsReread(
-      review.is_rewatch
-    );
-
-    setContainsSpoilers(
-      review.contains_spoilers
-    );
-
-    setShowDate(
-      review.show_consumed_date
-    );
+    resetValues();
 
     setEditing(false);
     setMessage("");
   }
 
   async function saveChanges() {
-    if (!reviewText.trim()) {
-      setMessage(
-        "La review no puede estar vacía."
-      );
-
+    if (loading) {
       return;
     }
 
     setLoading(true);
     setMessage("");
 
-    const { error } =
+    const {
+      error,
+    } =
       await supabase
         .from("reviews")
         .update({
           review_text:
-            reviewText.trim(),
+            reviewText.trim() ||
+            null,
+
+          rating,
 
           liked,
 
           is_rewatch:
-            isReread,
+            isRepeat,
 
           contains_spoilers:
             containsSpoilers,
 
-          show_consumed_date:
-            showDate,
-
           experience:
-            isReread
-              ? "REREAD"
-              : "FIRST_TIME",
+            getExperience(),
 
           updated_at:
             new Date().toISOString(),
@@ -236,29 +347,26 @@ export default function ReviewModalCard({
       !containsSpoilers
     );
 
-    setLoading(false);
-
     setMessage(
       "Review actualizada."
     );
+
+    setLoading(false);
 
     router.refresh();
   }
 
   async function deleteReview() {
-    const confirmed =
-      window.confirm(
-        "¿Seguro que quieres borrar esta review? Esta acción no se puede deshacer."
-      );
-
-    if (!confirmed) {
+    if (loading) {
       return;
     }
 
     setLoading(true);
     setMessage("");
 
-    const { error } =
+    const {
+      error,
+    } =
       await supabase
         .from("reviews")
         .delete()
@@ -273,68 +381,93 @@ export default function ReviewModalCard({
       );
 
       setLoading(false);
+      setConfirmDelete(false);
 
       return;
     }
 
-    setLoading(false);
+    setConfirmDelete(false);
     setOpen(false);
+    setLoading(false);
 
     router.refresh();
   }
 
+  const hasText =
+    reviewText
+      .trim()
+      .length > 0;
+
   return (
     <>
-      {/* CARD */}
       <div>
         <button
           type="button"
           onClick={openModal}
           className="block w-full text-left"
         >
-          <BookCover
-            title={review.title}
+          <ReviewCover
+            title={
+              review.title
+            }
             coverUrl={
               review.cover_url
             }
           />
         </button>
 
-        <div className="mt-2 flex items-center gap-3 text-zinc-500">
-          {review.liked ? (
-            <Heart
-              size={17}
-              fill="currentColor"
-            />
-          ) : (
-            <HeartCrack
-              size={17}
-            />
-          )}
+        <div className="mt-2">
+          <StarRating
+            value={rating}
+            readonly
+            size={17}
+            showLabel={false}
+          />
 
-          {review.is_rewatch ? (
-            <RotateCcw
-              size={17}
-            />
-          ) : (
-            <BookOpen
-              size={17}
-            />
-          )}
+          <div className="mt-2 flex items-center gap-3 text-zinc-500">
+            {liked ? (
+              <Heart
+                size={17}
+                fill="currentColor"
+                className="text-red-500"
+              />
+            ) : (
+              <HeartCrack
+                size={17}
+              />
+            )}
 
-          {review.contains_spoilers ? (
-            <ShieldAlert
-              size={17}
-            />
-          ) : (
-            <ShieldCheck
-              size={17}
-            />
-          )}
+            {isRepeat ? (
+              <Repeat2
+                size={17}
+              />
+            ) : mediaType ===
+              "BOOK" ? (
+              <BookOpen
+                size={17}
+              />
+            ) : mediaType ===
+              "GAME" ? (
+              <Gamepad2
+                size={17}
+              />
+            ) : (
+              <Eye size={17} />
+            )}
+
+            {containsSpoilers ? (
+              <ShieldAlert
+                size={17}
+              />
+            ) : (
+              <ShieldCheck
+                size={17}
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* MODAL */}
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
@@ -343,7 +476,7 @@ export default function ReviewModalCard({
           }
         >
           <div
-            className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-7 shadow-2xl"
+            className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7"
             onMouseDown={(
               event
             ) =>
@@ -355,128 +488,86 @@ export default function ReviewModalCard({
               onClick={
                 closeModal
               }
-              className="absolute right-5 top-5 text-zinc-500 transition hover:text-white"
+              disabled={
+                loading
+              }
+              className="absolute right-5 top-5 text-zinc-500 transition hover:text-white disabled:opacity-50"
+              aria-label="Cerrar"
             >
               <X size={26} />
             </button>
 
-            <div className="grid gap-8 md:grid-cols-[170px_1fr] md:items-stretch">
-
-              {/* PORTADA */}
-              <div className="flex h-full items-center justify-center">
+            <div className="grid gap-8 md:grid-cols-[170px_1fr] md:items-start">
+              <div className="flex justify-center md:pt-12">
                 <div className="w-full max-w-[150px]">
-                  {review.cover_url ? (
-                    <Link
-                      href={`/books/${review.external_id}`}
-                      onClick={() =>
-                        setOpen(
-                          false
-                        )
+                  <Link
+                    href={getRoute()}
+                    onClick={() =>
+                      setOpen(false)
+                    }
+                  >
+                    <ReviewCover
+                      title={
+                        review.title
                       }
-                      className="block"
-                    >
-                      <Image
-                        src={
-                          review.cover_url
-                        }
-                        alt={
-                          review.title
-                        }
-                        className="w-full rounded-xl border border-transparent object-cover shadow-xl transition-colors duration-200 hover:border-zinc-400"
-                      
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(review.cover_url)}
-        />
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/books/${review.external_id}`}
-                      onClick={() =>
-                        setOpen(
-                          false
-                        )
+                      coverUrl={
+                        review.cover_url
                       }
-                      className="flex aspect-[2/3] w-full items-center justify-center rounded-xl border border-transparent bg-zinc-900 text-zinc-500 transition-colors hover:border-zinc-400"
-                    >
-                      Sin imagen
-                    </Link>
-                  )}
+                    />
+                  </Link>
                 </div>
               </div>
 
-              {/* CONTENIDO */}
               <div className="min-w-0">
-                <h2 className="pr-10 text-2xl font-bold">
-                  {review.title}
-                </h2>
+                <div className="flex flex-wrap items-baseline gap-3 pr-10">
+                  <h2 className="text-2xl font-bold">
+                    {review.title}
+                  </h2>
 
-                {/* FECHA */}
-                {editing ? (
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowDate(
-                          !showDate
-                        )
+                  {review.release_year && (
+                    <span className="text-lg text-zinc-500">
+                      {
+                        review.release_year
                       }
-                      className="flex items-center gap-3 text-sm text-zinc-300"
-                    >
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-sm border transition ${
-                          showDate
-                            ? "border-zinc-300 bg-zinc-300"
-                            : "border-zinc-600 bg-transparent"
-                        }`}
-                      >
-                        {showDate && (
-                          <svg
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#111827"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="m5 12 4 4L19 6" />
-                          </svg>
-                        )}
-                      </span>
-
-                      <span>
-                        Read on
-                      </span>
-                    </button>
-
-                    <span className="rounded bg-zinc-800 px-2.5 py-1 text-sm text-zinc-200">
-                      {formatDate(
-                        review.consumed_at
-                      )}
                     </span>
-                  </div>
-                ) : (
-                  showDate && (
-                    <p className="mt-2 text-sm text-zinc-500">
-                      Leído el{" "}
-                      {formatDate(
-                        review.consumed_at
-                      )}
-                    </p>
-                  )
-                )}
+                  )}
+                </div>
 
-                {/* ICONOS */}
-                <div className="mt-6 flex flex-wrap items-start gap-10">
+                <p className="mt-2 text-sm text-zinc-500">
+                  {getDateLabel()}{" "}
+                  <span className="text-zinc-300">
+                    {formatDate(
+                      review.consumed_at
+                    )}
+                  </span>
+                </p>
+
+                <div className="mt-6">
+                  <p className="mb-2 text-sm font-medium text-zinc-300">
+                    Tu puntuación
+                  </p>
+
+                  <StarRating
+                    value={rating}
+                    onChange={
+                      editing
+                        ? setRating
+                        : undefined
+                    }
+                    readonly={
+                      !editing
+                    }
+                    size={32}
+                    showLabel={false}
+                  />
+                </div>
+
+                <div className="mt-7 flex flex-wrap items-start gap-8">
                   <ReviewToggle
                     editing={
                       editing
                     }
-                    active={
-                      liked
-                    }
+                    active={liked}
                     onClick={() =>
                       setLiked(
                         !liked
@@ -506,28 +597,18 @@ export default function ReviewModalCard({
                       editing
                     }
                     active={
-                      isReread
+                      isRepeat
                     }
                     onClick={() =>
-                      setIsReread(
-                        !isReread
+                      setIsRepeat(
+                        !isRepeat
                       )
                     }
                     icon={
-                      isReread ? (
-                        <RotateCcw
-                          size={30}
-                        />
-                      ) : (
-                        <BookOpen
-                          size={30}
-                        />
-                      )
+                      getRepeatIcon()
                     }
                     label={
-                      isReread
-                        ? "Relectura"
-                        : "Primera lectura"
+                      getRepeatLabel()
                     }
                   />
 
@@ -562,7 +643,6 @@ export default function ReviewModalCard({
                   />
                 </div>
 
-                {/* REVIEW */}
                 <div className="mt-8">
                   {editing ? (
                     <textarea
@@ -573,15 +653,15 @@ export default function ReviewModalCard({
                         event
                       ) =>
                         setReviewText(
-                          event
-                            .target
-                            .value
+                          event.target.value
                         )
                       }
-                      rows={7}
+                      placeholder="Escribe tu review..."
+                      rows={6}
                       className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 leading-7 text-zinc-200 outline-none transition focus:border-fuchsia-500"
                     />
-                  ) : containsSpoilers &&
+                  ) : hasText &&
+                    containsSpoilers &&
                     !spoilersRevealed ? (
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center">
                       <ShieldAlert
@@ -609,12 +689,18 @@ export default function ReviewModalCard({
                         Mostrar review
                       </button>
                     </div>
-                  ) : (
+                  ) : hasText ? (
                     <div className="rounded-xl bg-zinc-900/40 p-5">
                       <p className="whitespace-pre-wrap leading-7 text-zinc-300">
-                        {reviewText}
+                        {
+                          reviewText
+                        }
                       </p>
                     </div>
+                  ) : (
+                    <p className="text-sm italic text-zinc-600">
+                      Sin review escrita.
+                    </p>
                   )}
                 </div>
 
@@ -624,12 +710,13 @@ export default function ReviewModalCard({
                   </p>
                 )}
 
-                {/* ACCIONES */}
                 <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={
-                      deleteReview
+                    onClick={() =>
+                      setConfirmDelete(
+                        true
+                      )
                     }
                     disabled={
                       loading
@@ -639,6 +726,7 @@ export default function ReviewModalCard({
                     <Trash2
                       size={17}
                     />
+
                     Borrar
                   </button>
 
@@ -651,11 +739,15 @@ export default function ReviewModalCard({
                             true
                           )
                         }
-                        className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900"
+                        disabled={
+                          loading
+                        }
+                        className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
                       >
                         <Pencil
                           size={17}
                         />
+
                         Editar
                       </button>
                     ) : (
@@ -700,6 +792,83 @@ export default function ReviewModalCard({
           </div>
         </div>
       )}
+
+      {open &&
+        confirmDelete && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            onMouseDown={() => {
+              if (!loading) {
+                setConfirmDelete(
+                  false
+                );
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl"
+              onMouseDown={(
+                event
+              ) =>
+                event.stopPropagation()
+              }
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+                <Trash2
+                  size={21}
+                />
+              </div>
+
+              <h3 className="mt-5 text-xl font-semibold text-zinc-100">
+                ¿Borrar review?
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                La review de{" "}
+                <span className="font-medium text-zinc-300">
+                  {review.title}
+                </span>{" "}
+                se eliminará permanentemente. Esta acción no se puede deshacer.
+              </p>
+
+              <div className="mt-7 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfirmDelete(
+                      false
+                    )
+                  }
+                  disabled={
+                    loading
+                  }
+                  className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    deleteReview
+                  }
+                  disabled={
+                    loading
+                  }
+                  className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
+                >
+                  <Trash2
+                    size={16}
+                  />
+
+                  {loading
+                    ? "Borrando..."
+                    : "Borrar review"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </>
   );
 }
@@ -714,7 +883,7 @@ function ReviewToggle({
   editing: boolean;
   active: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
 }) {
   return (
@@ -722,13 +891,13 @@ function ReviewToggle({
       type="button"
       disabled={!editing}
       onClick={onClick}
-      className={`flex min-w-[90px] flex-col items-center gap-2 text-center ${
+      className={`flex min-w-[90px] flex-col items-center gap-2 text-center transition ${
         editing
           ? "cursor-pointer"
           : "cursor-default"
       } ${
         active
-          ? "text-zinc-300"
+          ? "text-fuchsia-400"
           : "text-zinc-500"
       }`}
     >
@@ -741,7 +910,7 @@ function ReviewToggle({
   );
 }
 
-function BookCover({
+function ReviewCover({
   title,
   coverUrl,
 }: {
@@ -749,16 +918,19 @@ function BookCover({
   coverUrl: string | null;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition-colors duration-200 hover:border-zinc-400">
+    <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition hover:border-zinc-400">
       {coverUrl ? (
         <Image
           src={coverUrl}
           alt={title}
-          className="aspect-[2/3] w-full object-cover"
-        
           width={500}
           height={750}
-          unoptimized={shouldUseOriginalImage(coverUrl)}
+          unoptimized={
+            shouldUseOriginalImage(
+              coverUrl
+            )
+          }
+          className="aspect-[2/3] w-full object-cover"
         />
       ) : (
         <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">

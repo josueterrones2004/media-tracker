@@ -1,14 +1,19 @@
 "use client";
 
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import MediaActionBar from "@/components/media/MediaActionBar";
+import StarRating from "@/components/media/StarRating";
 
 import {
-  useEffect,
-  useState,
-} from "react";
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 interface MovieActionsProps {
   movie: {
@@ -36,16 +41,14 @@ function getToday() {
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat(
-    "en-GB",
+    "es-MX",
     {
-      day: "2-digit",
+      day: "numeric",
       month: "short",
       year: "numeric",
     }
   ).format(
-    new Date(
-      `${date}T12:00:00`
-    )
+    new Date(`${date}T12:00:00`)
   );
 }
 
@@ -78,8 +81,9 @@ function EyeToggleIcon({
         pathLength="1"
         style={{
           strokeDasharray: 1,
-          strokeDashoffset:
-            rewatch ? 1 : 0,
+          strokeDashoffset: rewatch
+            ? 1
+            : 0,
           transition:
             "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
         }}
@@ -110,22 +114,15 @@ function SpoilerToggleIcon({
         d="m8.5 12 2.2 2.2 4.8-5"
         pathLength="1"
         style={{
-          opacity:
-            active ? 0 : 1,
-
+          opacity: active ? 0 : 1,
           strokeDasharray: 1,
-
-          strokeDashoffset:
-            active ? 1 : 0,
-
-          transform:
-            active
-              ? "scale(.7)"
-              : "scale(1)",
-
-          transformOrigin:
-            "center",
-
+          strokeDashoffset: active
+            ? 1
+            : 0,
+          transform: active
+            ? "scale(.7)"
+            : "scale(1)",
+          transformOrigin: "center",
           transition:
             "opacity 200ms ease, stroke-dashoffset 300ms ease, transform 250ms ease",
         }}
@@ -133,17 +130,11 @@ function SpoilerToggleIcon({
 
       <g
         style={{
-          opacity:
-            active ? 1 : 0,
-
-          transform:
-            active
-              ? "scale(1)"
-              : "scale(.7)",
-
-          transformOrigin:
-            "center",
-
+          opacity: active ? 1 : 0,
+          transform: active
+            ? "scale(1)"
+            : "scale(.7)",
+          transformOrigin: "center",
           transition:
             "opacity 200ms ease, transform 250ms ease",
         }}
@@ -183,10 +174,9 @@ function HeartToggleIcon({
         fill="none"
         style={{
           strokeDasharray: 1,
-
-          strokeDashoffset:
-            liked ? 1 : 0,
-
+          strokeDashoffset: liked
+            ? 1
+            : 0,
           transition:
             "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
         }}
@@ -198,14 +188,20 @@ function HeartToggleIcon({
 export default function MovieActions({
   movie,
 }: MovieActionsProps) {
-  const [supabase] =
-    useState(() =>
-      createClient()
-    );
+  const router = useRouter();
+
+  const [supabase] = useState(
+    () => createClient()
+  );
 
   const [
     pending,
     setPending,
+  ] = useState(false);
+
+  const [
+    hasWatchedBefore,
+    setHasWatchedBefore,
   ] = useState(false);
 
   const [
@@ -224,6 +220,13 @@ export default function MovieActions({
   ] = useState("");
 
   const [
+    rating,
+    setRating,
+  ] = useState<number | null>(
+    null
+  );
+
+  const [
     liked,
     setLiked,
   ] = useState(true);
@@ -239,16 +242,9 @@ export default function MovieActions({
   ] = useState(false);
 
   const [
-    showDate,
-    setShowDate,
-  ] = useState(true);
-
-  const [
     watchedDate,
     setWatchedDate,
-  ] = useState(
-    getToday()
-  );
+  ] = useState(getToday());
 
   const [
     message,
@@ -256,55 +252,107 @@ export default function MovieActions({
   ] = useState("");
 
   useEffect(() => {
-    async function loadState() {
-      const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
+    let cancelled = false;
 
-      if (!user) {
-        return;
-      }
+    const timeout =
+      window.setTimeout(() => {
+        void (async () => {
+          const {
+            data: { user },
+          } =
+            await supabase.auth.getUser();
 
-      const {
-        data,
-        error,
-      } =
-        await supabase
-          .from(
-            "library_items"
-          )
-          .select("status")
-          .eq(
-            "user_id",
-            user.id
-          )
-          .eq(
-            "media_type",
-            "MOVIE"
-          )
-          .eq(
-            "external_id",
-            String(movie.id)
-          )
-          .maybeSingle();
+          if (
+            !user ||
+            cancelled
+          ) {
+            return;
+          }
 
-      if (error) {
-        console.error(
-          "Error loading movie state:",
-          error
-        );
+          const [
+            libraryResult,
+            reviewResult,
+          ] = await Promise.all([
+            supabase
+              .from("library_items")
+              .select("status")
+              .eq(
+                "user_id",
+                user.id
+              )
+              .eq(
+                "media_type",
+                "MOVIE"
+              )
+              .eq(
+                "external_id",
+                String(movie.id)
+              )
+              .maybeSingle(),
 
-        return;
-      }
+            supabase
+              .from("reviews")
+              .select("id")
+              .eq(
+                "user_id",
+                user.id
+              )
+              .eq(
+                "media_type",
+                "MOVIE"
+              )
+              .eq(
+                "external_id",
+                String(movie.id)
+              )
+              .limit(1),
+          ]);
 
-      setPending(
-        data?.status ===
-          "PENDING"
+          if (
+            libraryResult.error
+          ) {
+            console.error(
+              "Error loading movie state:",
+              libraryResult.error
+            );
+          }
+
+          if (
+            reviewResult.error
+          ) {
+            console.error(
+              "Error loading movie reviews:",
+              reviewResult.error
+            );
+          }
+
+          if (cancelled) {
+            return;
+          }
+
+          setPending(
+            libraryResult.data
+              ?.status ===
+              "PENDING"
+          );
+
+          setHasWatchedBefore(
+            Boolean(
+              reviewResult.data &&
+                reviewResult.data
+                  .length > 0
+            )
+          );
+        })();
+      }, 0);
+
+    return () => {
+      cancelled = true;
+
+      window.clearTimeout(
+        timeout
       );
-    }
-
-    loadState();
+    };
   }, [
     movie.id,
     supabase,
@@ -314,17 +362,14 @@ export default function MovieActions({
     userId: string
   ) {
     return {
-      user_id:
-        userId,
+      user_id: userId,
 
-      media_type:
-        "MOVIE",
+      media_type: "MOVIE",
 
       external_id:
         String(movie.id),
 
-      title:
-        movie.title,
+      title: movie.title,
 
       original_title:
         movie.original_title ??
@@ -352,7 +397,13 @@ export default function MovieActions({
     };
   }
 
-  async function markPending() {
+  async function markPending(
+    newStatus: string | null
+  ) {
+    if (loading) {
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -367,7 +418,69 @@ export default function MovieActions({
       );
 
       setLoading(false);
+      return;
+    }
 
+    if (newStatus === null) {
+      const {
+        data: deletedRows,
+        error: deleteError,
+      } =
+        await supabase
+          .from("library_items")
+          .delete()
+          .eq(
+            "user_id",
+            user.id
+          )
+          .eq(
+            "media_type",
+            "MOVIE"
+          )
+          .eq(
+            "external_id",
+            String(movie.id)
+          )
+          .select("id");
+
+      if (deleteError) {
+        setMessage(
+          deleteError.message
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      if (
+        !deletedRows ||
+        deletedRows.length === 0
+      ) {
+        setMessage(
+          "No se pudo quitar la película de pendientes."
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      setPending(false);
+
+      setMessage(
+        "Película quitada de pendientes."
+      );
+
+      setLoading(false);
+
+      router.refresh();
+
+      return;
+    }
+
+    if (
+      newStatus !== "PENDING"
+    ) {
+      setLoading(false);
       return;
     }
 
@@ -376,13 +489,9 @@ export default function MovieActions({
         user.id
       );
 
-    const {
-      error,
-    } =
+    const { error } =
       await supabase
-        .from(
-          "library_items"
-        )
+        .from("library_items")
         .upsert(
           {
             ...movieData,
@@ -401,22 +510,14 @@ export default function MovieActions({
       );
 
       setLoading(false);
-
       return;
     }
 
-    /*
-     * Actividad social:
-     * añadió película a pendientes
-     */
     const {
-      error:
-        activityError,
+      error: activityError,
     } =
       await supabase
-        .from(
-          "activity_events"
-        )
+        .from("activity_events")
         .insert({
           user_id:
             user.id,
@@ -437,9 +538,7 @@ export default function MovieActions({
             movieData.cover_url,
         });
 
-    if (
-      activityError
-    ) {
+    if (activityError) {
       console.error(
         "Error creating movie pending activity:",
         activityError
@@ -453,6 +552,8 @@ export default function MovieActions({
     );
 
     setLoading(false);
+
+    router.refresh();
   }
 
   async function openWatchedModal() {
@@ -474,6 +575,8 @@ export default function MovieActions({
     const {
       data:
         previousReviews,
+
+      error,
     } =
       await supabase
         .from("reviews")
@@ -492,17 +595,29 @@ export default function MovieActions({
         )
         .limit(1);
 
-    setIsRewatch(
+    if (error) {
+      console.error(
+        "Error checking previous movie reviews:",
+        error
+      );
+    }
+
+    const rewatch =
       Boolean(
         previousReviews &&
-          previousReviews.length >
-            0
-      )
+          previousReviews
+            .length > 0
+      );
+
+    setIsRewatch(
+      rewatch
     );
 
     setWatchedDate(
       getToday()
     );
+
+    setRating(null);
 
     setLiked(true);
 
@@ -510,27 +625,21 @@ export default function MovieActions({
       false
     );
 
-    setShowDate(true);
-
     setReview("");
 
     setShowReview(true);
   }
 
   async function saveReview() {
-    setMessage("");
-
-    if (
-      !review.trim()
-    ) {
-      setMessage(
-        "La review es obligatoria."
-      );
-
+    if (loading) {
       return;
     }
 
     setLoading(true);
+    setMessage("");
+
+    const cleanReview =
+      review.trim();
 
     const {
       data: { user },
@@ -552,14 +661,10 @@ export default function MovieActions({
         user.id
       );
 
-    /*
-     * Guardamos review y obtenemos
-     * su ID para enlazarla con
-     * activity_events.
-     */
     const {
       data:
         createdReview,
+
       error:
         reviewError,
     } =
@@ -579,7 +684,10 @@ export default function MovieActions({
             movie.title,
 
           review_text:
-            review.trim(),
+            cleanReview ||
+            null,
+
+          rating,
 
           liked,
 
@@ -590,7 +698,7 @@ export default function MovieActions({
             containsSpoilers,
 
           show_consumed_date:
-            showDate,
+            true,
 
           experience:
             isRewatch
@@ -624,16 +732,6 @@ export default function MovieActions({
       return;
     }
 
-    /*
-     * Actividad social de la película.
-     *
-     * En el feed podremos mostrar:
-     *
-     * Heather vio Dune
-     *
-     * y al pulsar podremos abrir
-     * esta review concreta.
-     */
     if (
       createdReview
     ) {
@@ -680,13 +778,6 @@ export default function MovieActions({
       }
     }
 
-    /*
-     * Si estaba pendiente,
-     * desaparece del estado actual.
-     *
-     * La review queda guardada
-     * permanentemente.
-     */
     const {
       error:
         deleteError,
@@ -723,9 +814,11 @@ export default function MovieActions({
 
     setPending(false);
 
-    setShowReview(
-      false
+    setHasWatchedBefore(
+      true
     );
+
+    setShowReview(false);
 
     setMessage(
       isRewatch
@@ -734,6 +827,8 @@ export default function MovieActions({
     );
 
     setLoading(false);
+
+    router.refresh();
   }
 
   const poster =
@@ -749,74 +844,73 @@ export default function MovieActions({
 
   return (
     <>
-      <section className="mt-10">
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={
-              openWatchedModal
-            }
-            className="rounded-xl bg-fuchsia-500 px-5 py-3 font-medium text-white transition hover:bg-fuchsia-400"
-          >
-            Marcar como vista
-          </button>
-
-          <button
-            type="button"
-            onClick={
-              markPending
-            }
-            disabled={
-              loading ||
-              pending
-            }
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {pending
-              ? "✓ Pendiente"
-              : "Marcar como pendiente"}
-          </button>
-        </div>
-
-        {message && (
-          <p className="mt-3 text-sm text-zinc-400">
-            {message}
-          </p>
-        )}
-      </section>
+      <MediaActionBar
+        primaryLabel={
+          hasWatchedBefore
+            ? "Registrar rewatch"
+            : "Marcar como vista"
+        }
+        onPrimaryAction={
+          openWatchedModal
+        }
+        primaryDisabled={
+          loading
+        }
+        statusOptions={[
+          {
+            value:
+              "PENDING",
+            label:
+              "Pendiente",
+          },
+        ]}
+        activeStatus={
+          pending
+            ? "PENDING"
+            : null
+        }
+        statusDisabled={
+          loading
+        }
+        onStatusChange={markPending}
+        message={message}
+      />
 
       {showReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950 p-7 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7">
             <button
               type="button"
               onClick={() =>
-                setShowReview(
-                  false
-                )
+                setShowReview(false)
               }
-              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white"
+              disabled={loading}
+              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white disabled:opacity-50"
+              aria-label="Cerrar"
             >
               ×
             </button>
 
             <div className="grid gap-8 md:grid-cols-[180px_1fr] md:items-start">
+              {/* POSTER */}
+
               <div className="flex justify-center md:justify-start md:pt-16">
                 <div className="w-full max-w-[180px]">
                   {poster ? (
                     <Image
-                      src={
-                        poster
-                      }
+                      src={poster}
                       alt={
                         movie.title
                       }
+                      width={500}
+                      height={750}
+                      unoptimized={
+                        shouldUseOriginalImage(
+                          poster
+                        )
+                      }
                       className="w-full rounded-xl object-cover shadow-xl"
-                    
-          width={500}
-          height={750}
-          unoptimized={shouldUseOriginalImage(poster)}
-        />
+                    />
                   ) : (
                     <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
                       Sin imagen
@@ -825,12 +919,12 @@ export default function MovieActions({
                 </div>
               </div>
 
-              <div className="pt-7">
-                <div className="flex flex-wrap items-baseline gap-3">
+              {/* CONTENIDO */}
+
+              <div className="min-w-0 pt-2 md:pt-7">
+                <div className="flex flex-wrap items-baseline gap-3 pr-10">
                   <h2 className="text-2xl font-bold">
-                    {
-                      movie.title
-                    }
+                    {movie.title}
                   </h2>
 
                   {year && (
@@ -840,77 +934,63 @@ export default function MovieActions({
                   )}
                 </div>
 
+                {/* FECHA SOLO VISUAL */}
+
+                <p className="mt-5 text-sm text-zinc-500">
+                  Vista el{" "}
+                  <span className="text-zinc-300">
+                    {formatDate(
+                      watchedDate
+                    )}
+                  </span>
+                </p>
+
+                {/* RATING */}
+
                 <div className="mt-6">
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowDate(
-                          !showDate
-                        )
-                      }
-                      className="flex items-center gap-3"
-                    >
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-sm border transition ${
-                          showDate
-                            ? "border-zinc-300 bg-zinc-300"
-                            : "border-zinc-500 bg-transparent"
-                        }`}
-                      >
-                        {showDate && (
-                          <svg
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#111827"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="m5 12 4 4L19 6" />
-                          </svg>
-                        )}
-                      </span>
+                  <p className="mb-2 text-sm font-medium text-zinc-300">
+                    Tu puntuación
+                  </p>
 
-                      <span>
-                        Watched on
-                      </span>
-                    </button>
-
-                    <span className="rounded bg-zinc-800 px-2.5 py-1 text-sm text-zinc-200">
-                      {formatDate(
-                        watchedDate
-                      )}
-                    </span>
-                  </div>
+                  <StarRating
+                    value={rating}
+                    onChange={
+                      setRating
+                    }
+                    size={34}
+                    showLabel={
+                      false
+                    }
+                  />
                 </div>
 
+                {/* REVIEW */}
+
                 <textarea
-                  value={
-                    review
-                  }
+                  value={review}
                   onChange={(
                     event
                   ) =>
                     setReview(
-                      event
-                        .target
-                        .value
+                      event.target.value
                     )
                   }
                   placeholder="Escribe tu review..."
-                  rows={7}
+                  rows={6}
                   className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-fuchsia-500"
                 />
 
-                <div className="mt-8 grid grid-cols-3 gap-6">
+                {/* OPCIONES */}
+
+                <div className="mt-8 grid grid-cols-3 gap-4 sm:gap-6">
                   <button
                     type="button"
                     onClick={() =>
                       setIsRewatch(
-                        !isRewatch
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -936,7 +1016,10 @@ export default function MovieActions({
                     type="button"
                     onClick={() =>
                       setContainsSpoilers(
-                        !containsSpoilers
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -962,7 +1045,10 @@ export default function MovieActions({
                     type="button"
                     onClick={() =>
                       setLiked(
-                        !liked
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -972,9 +1058,7 @@ export default function MovieActions({
                     }`}
                   >
                     <HeartToggleIcon
-                      liked={
-                        liked
-                      }
+                      liked={liked}
                     />
 
                     <span className="text-center text-sm text-zinc-300">
@@ -1000,11 +1084,13 @@ export default function MovieActions({
                     disabled={
                       loading
                     }
-                    className="rounded-xl bg-fuchsia-500 px-6 py-3 font-medium text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
+                    className="rounded-xl bg-fuchsia-500 px-6 py-3 font-medium text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading
                       ? "Guardando..."
-                      : "Guardar review"}
+                      : isRewatch
+                        ? "Guardar rewatch"
+                        : "Guardar"}
                   </button>
                 </div>
               </div>
