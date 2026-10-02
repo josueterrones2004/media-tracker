@@ -2,6 +2,12 @@ import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
+import DiscoverSection from "@/components/home/DiscoverSection";
+
+import {
+  getDiscoverItems,
+} from "@/lib/discover";
+
 import PublicLanding from "@/components/PublicLanding";
 import { shouldUseOriginalImage } from "@/lib/image-optimization";
 import { createClient } from "@/lib/supabase/server";
@@ -81,60 +87,75 @@ export default async function HomePage() {
     return <PublicLanding />;
   }
 
-  const [
-    libraryResult,
-    activityResult,
-    followingResult,
-  ] = await Promise.all([
-    supabase
-      .from("library_items")
-      .select(`
-        id,
-        external_id,
-        media_type,
-        title,
-        cover_url,
-        release_year,
-        status,
-        created_at
-      `)
-      .eq("user_id", user.id)
-      .order("created_at", {
-        ascending: false,
-      }),
-
-    supabase
-      .from("activity_events")
-      .select(`
-        id,
-        user_id,
-        activity_type,
-        media_type,
-        external_id,
-        title,
-        cover_url,
-        season_number,
-        episode_number,
-        episode_title,
-        created_at
-      `)
-      .eq("user_id", user.id)
-      .in("activity_type", [
-        "EPISODE_WATCHED",
-        "COMPLETED",
-        "REVIEWED",
-      ])
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(6),
-
-    supabase
-      .from("profile_follows")
-      .select("following_id")
-      .eq("follower_id", user.id),
-  ]);
-
+    const [
+      libraryResult,
+      activityResult,
+      followingResult,
+      discoverItems,
+    ] = await Promise.all([
+      supabase
+        .from("library_items")
+        .select(`
+          id,
+          external_id,
+          media_type,
+          title,
+          cover_url,
+          release_year,
+          status,
+          created_at
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        }),
+      
+      supabase
+        .from("activity_events")
+        .select(`
+          id,
+          user_id,
+          activity_type,
+          media_type,
+          external_id,
+          title,
+          cover_url,
+          season_number,
+          episode_number,
+          episode_title,
+          created_at
+        `)
+        .eq("user_id", user.id)
+        .in("activity_type", [
+          "EPISODE_WATCHED",
+          "COMPLETED",
+          "REVIEWED",
+        ])
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(6),
+      
+      supabase
+        .from("profile_follows")
+        .select("following_id")
+        .eq("follower_id", user.id),
+      
+      getDiscoverItems()
+        .catch(
+          (
+            error
+          ) => {
+            console.error(
+              "Error loading discover items:",
+              error
+            );
+          
+            return [];
+          }
+        ),
+    ]);
+     
   if (libraryResult.error) {
     return (
       <main>
@@ -309,6 +330,15 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-hidden pb-14">
+     
+      {/* TENDENCIAS */}
+
+      <DiscoverSection
+        items={
+          discoverItems
+        }
+      />
+
       {/* PENDIENTE */}
 
       <HomeSection

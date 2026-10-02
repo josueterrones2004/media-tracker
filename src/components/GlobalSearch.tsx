@@ -69,14 +69,9 @@ type SourceResults =
 
 const EMPTY_RESULTS:
   SourceResults = {
-  games:
-    [],
-
-  screen:
-    [],
-
-  books:
-    [],
+  games: [],
+  screen: [],
+  books: [],
 };
 
 const SOURCES:
@@ -170,11 +165,6 @@ function parseRecent(
   }
 }
 
-/*
- * Mezcla fuentes a medida
- * que van llegando.
- */
-
 function mergeSuggestions(
   results:
     SourceResults
@@ -184,14 +174,6 @@ function mergeSuggestions(
     ...results.screen,
     ...results.books,
   ];
-
-  /*
-   * Un medio con varias coincidencias
-   * fuertes recibe una pequeña ventaja.
-   *
-   * Fallout:
-   * muchos juegos fuertes -> juegos suben.
-   */
 
   const strongByKind =
     new Map<
@@ -259,15 +241,13 @@ function mergeSuggestions(
         result
       ) => {
         /*
-         * Autocomplete no necesita mostrar
-         * cuatro libros idénticos llamados
-         * "Fallout".
+         * Aquí usamos el ID real.
+         *
+         * De esta forma dos obras distintas
+         * con el mismo título no desaparecen.
          */
-
         const key =
-          `${result.kind}:${normalize(
-            result.title
-          )}`;
+          result.key;
 
         if (
           seen.has(
@@ -324,8 +304,16 @@ export default function GlobalSearch({
     );
 
   /*
-   * Caché independiente por fuente.
+   * Indica que la siguiente navegación
+   * salió desde este buscador.
+   *
+   * Cuando cambie la URL forzaremos
+   * scroll al inicio.
    */
+  const scrollToTopRef =
+    useRef(
+      false
+    );
 
   const cacheRef =
     useRef(
@@ -406,6 +394,44 @@ export default function GlobalSearch({
     mergeSuggestions(
       sourceResults
     );
+
+  /*
+   * SCROLL DESPUÉS DE NAVEGAR
+   */
+
+  useEffect(
+    () => {
+      if (
+        !scrollToTopRef.current
+      ) {
+        return;
+      }
+
+      scrollToTopRef.current =
+        false;
+
+      const frame =
+        window.requestAnimationFrame(
+          () => {
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior:
+                "auto",
+            });
+          }
+        );
+
+      return () =>
+        window.cancelAnimationFrame(
+          frame
+        );
+    },
+    [
+      pathname,
+      currentQuery,
+    ]
+  );
 
   /*
    * RECENTS
@@ -562,10 +588,6 @@ export default function GlobalSearch({
             new AbortController()
         );
 
-      /*
-       * Solo ~100 ms de debounce.
-       */
-
       const timeout =
         window.setTimeout(
           () => {
@@ -580,11 +602,6 @@ export default function GlobalSearch({
               normalize(
                 query
               );
-
-            /*
-             * Primero cargamos todo lo
-             * que ya tengamos cacheado.
-             */
 
             const initial:
               SourceResults = {
@@ -697,13 +714,6 @@ export default function GlobalSearch({
                         `${source}:${normalizedQuery}`,
                         results
                       );
-
-                      /*
-                       * Aquí está la clave:
-                       *
-                       * en cuanto llega UNA fuente,
-                       * actualizamos el dropdown.
-                       */
 
                       setSourceResults(
                         (
@@ -887,12 +897,19 @@ export default function GlobalSearch({
       true
     );
 
+    scrollToTopRef.current =
+      true;
+
     onNavigate?.();
 
     router.push(
       `/search?q=${encodeURIComponent(
         clean
-      )}`
+      )}`,
+      {
+        scroll:
+          true,
+      }
     );
   }
 
@@ -920,10 +937,17 @@ export default function GlobalSearch({
       true
     );
 
+    scrollToTopRef.current =
+      true;
+
     onNavigate?.();
 
     router.push(
-      suggestion.href
+      suggestion.href,
+      {
+        scroll:
+          true,
+      }
     );
   }
 
@@ -1115,8 +1139,6 @@ export default function GlobalSearch({
       {(showRecent ||
         showSuggestions) && (
         <div className="absolute left-0 right-0 top-[52px] z-[80] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-          {/* RECENT */}
-
           {showRecent && (
             <div className="p-2">
               <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
@@ -1173,8 +1195,6 @@ export default function GlobalSearch({
               )}
             </div>
           )}
-
-          {/* SUGGESTIONS */}
 
           {showSuggestions && (
             <div className="p-2">
@@ -1268,8 +1288,6 @@ export default function GlobalSearch({
                       </button>
                     )
                   )}
-
-                  {/* PROGRESS */}
 
                   {fetching && (
                     <div className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-700">

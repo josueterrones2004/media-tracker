@@ -174,7 +174,9 @@ function canonicalizeSearchText(
 
   const words =
     normalized
-      .split(" ")
+      .split(
+        " "
+      )
       .map(
         (
           word
@@ -351,11 +353,6 @@ function getSimilarity(
     return 0;
   }
 
-  /*
-   * Evitamos hacer Levenshtein
-   * sobre cadenas enormes.
-   */
-
   const left =
     first.slice(
       0,
@@ -488,12 +485,6 @@ function getTitleScore(
       queryWords.length
     ) *
     55;
-
-  /*
-   * Tolerancia a errores.
-   *
-   * interstelar -> interstellar
-   */
 
   const similarity =
     getSimilarity(
@@ -1039,18 +1030,29 @@ function deduplicateResults(
     const result of
     results
   ) {
+    /*
+     * Películas, series y juegos pueden compartir
+     * exactamente el mismo título aunque sean obras
+     * diferentes: remakes, adaptaciones, reboots, etc.
+     *
+     * En esos casos el ID del proveedor es lo que
+     * realmente identifica al contenido.
+     *
+     * Para libros mantenemos la deduplicación visual
+     * por título + autor porque Open Library puede
+     * devolver obras prácticamente idénticas.
+     */
+
     const key =
       result.kind ===
       "book"
-        ? `${normalizeSearchText(
+        ? `book:${normalizeSearchText(
             result.title
           )}:${normalizeSearchText(
             result.meta ??
               ""
           )}`
-        : `${result.kind}:${normalizeSearchText(
-            result.title
-          )}`;
+        : result.key;
 
     if (
       seen.has(

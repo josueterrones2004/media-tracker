@@ -23,6 +23,9 @@ export type IGDBNamedItem = {
 export type IGDBImage = {
   id: number;
   image_id: string;
+
+  width?: number;
+  height?: number;
 };
 
 export type IGDBAlternativeName = {
@@ -50,6 +53,9 @@ export type IGDBGame = {
 
   cover?:
     IGDBImage;
+
+  artworks?:
+    IGDBImage[];
 
   screenshots?:
     IGDBImage[];
@@ -110,12 +116,6 @@ function getCredentials() {
  */
 
 async function getAccessToken() {
-  /*
-   * Reutilizamos el token mientras
-   * todavía tenga al menos 1 minuto
-   * de vida.
-   */
-
   if (
     cachedToken &&
     cachedToken.expiresAt >
@@ -358,23 +358,13 @@ export function getIGDBGameTypeLabel(
 }
 
 /*
- * SEARCH FILTER
+ * GAME FILTER
  */
 
 function shouldShowGame(
   game:
     IGDBGame
 ) {
-  /*
-   * Si tiene version_parent, normalmente
-   * es una edición/versión de otro juego:
-   *
-   * Collector's Edition
-   * Day One Edition
-   * Complete Edition
-   * etc.
-   */
-
   if (
     game.version_parent
   ) {
@@ -387,21 +377,9 @@ function shouldShowGame(
         ?.type
     );
 
-  /*
-   * Si por algún motivo IGDB no devuelve
-   * el tipo, conservamos el resultado
-   * antes que ocultar un juego válido.
-   */
-
-  if (
-    !type
-  ) {
+  if (!type) {
     return true;
   }
-
-  /*
-   * Tipos que sí queremos en la búsqueda.
-   */
 
   const allowedTypes =
     new Set([
@@ -420,7 +398,31 @@ function shouldShowGame(
 }
 
 /*
- * GAME SEARCH
+ * COMMON DISCOVER FIELDS
+ */
+
+const DISCOVER_GAME_FIELDS = `
+  id,
+  name,
+  summary,
+  cover.image_id,
+  cover.width,
+  cover.height,
+  artworks.image_id,
+  artworks.width,
+  artworks.height,
+  screenshots.image_id,
+  screenshots.width,
+  screenshots.height,
+  first_release_date,
+  game_type.type,
+  version_parent,
+  total_rating,
+  total_rating_count
+`;
+
+/*
+ * SEARCH
  */
 
 export async function searchIGDBGames(
@@ -432,17 +434,9 @@ export async function searchIGDBGames(
       query
     );
 
-  if (
-    !cleanQuery
-  ) {
+  if (!cleanQuery) {
     return [];
   }
-
-  /*
-   * Pedimos más de 20 porque después
-   * filtramos versiones y categorías
-   * que no nos interesan.
-   */
 
   const games =
     await requestIGDB<
@@ -451,6 +445,7 @@ export async function searchIGDBGames(
       "games",
       `
         search "${cleanQuery}";
+
         fields
           id,
           name,
@@ -463,15 +458,12 @@ export async function searchIGDBGames(
           version_parent,
           total_rating,
           total_rating_count;
+
         where version_parent = null;
+
         limit 50;
       `
     );
-
-  /*
-   * Eliminamos bundles, mods, packs,
-   * updates y demás ruido.
-   */
 
   return games
     .filter(
@@ -480,6 +472,224 @@ export async function searchIGDBGames(
     .slice(
       0,
       30
+    );
+}
+
+/*
+ * POPULAR GAMES
+ *
+ * Se usan para Tendencias.
+ *
+ * Aquí sí permitimos títulos de varios
+ * años atrás porque pueden seguir siendo
+ * populares actualmente.
+ */
+
+export async function getPopularIGDBGames() {
+  const now =
+    Math.floor(
+      Date.now() /
+        1000
+    );
+
+  const threeYearsAgo =
+    Math.floor(
+      (
+        Date.now() -
+        3 *
+          365 *
+          24 *
+          60 *
+          60 *
+          1000
+      ) /
+        1000
+    );
+
+  const games =
+    await requestIGDB<
+      IGDBGame[]
+    >(
+      "games",
+      `
+        fields
+          ${DISCOVER_GAME_FIELDS};
+
+        where
+          version_parent = null
+          & cover != null
+          & first_release_date != null
+          & first_release_date >= ${threeYearsAgo}
+          & first_release_date <= ${now}
+          & total_rating_count != null;
+
+        sort total_rating_count desc;
+
+        limit 40;
+      `
+    );
+
+  return games
+    .filter(
+      shouldShowGame
+    )
+    .filter(
+      (
+        game
+      ) =>
+        Boolean(
+          game.cover
+            ?.image_id
+        )
+    )
+    .slice(
+      0,
+      30
+    );
+}
+
+/*
+ * RECENT + RELEVANT GAMES
+ *
+ * Exclusivamente para el carrusel
+ * "Estrenos y novedades".
+ *
+ * Requisitos:
+ * - ya debe haber salido
+ * - máximo 6 meses de antigüedad
+ * - debe tener cierta relevancia en IGDB
+ * - debe disponer de imagen horizontal
+ */
+
+export async function getRecentIGDBGames() {
+  const now =
+    Math.floor(
+      Date.now() /
+        1000
+    );
+
+  const sixMonthsAgo =
+    Math.floor(
+      (
+        Date.now() -
+        183 *
+          24 *
+          60 *
+          60 *
+          1000
+      ) /
+        1000
+    );
+
+  const games =
+    await requestIGDB<
+      IGDBGame[]
+    >(
+      "games",
+      `
+        fields
+          id,
+          name,
+          summary,
+          cover.image_id,
+          cover.width,
+          cover.height,
+          artworks.image_id,
+          artworks.width,
+          artworks.height,
+          screenshots.image_id,
+          screenshots.width,
+          screenshots.height,
+          first_release_date,
+          game_type.type,
+          version_parent,
+          total_rating,
+          total_rating_count;
+
+        where
+          version_parent = null
+          & cover != null
+          & first_release_date != null
+          & first_release_date >= ${sixMonthsAgo}
+          & first_release_date <= ${now}
+          & total_rating_count != null
+          & total_rating_count >= 30;
+
+        sort total_rating_count desc;
+
+        limit 50;
+      `
+    );
+
+  return games
+    .filter(
+      shouldShowGame
+    )
+    .filter(
+      (
+        game
+      ) =>
+        Boolean(
+          game.cover
+            ?.image_id
+        )
+    )
+    .filter(
+      (
+        game
+      ) =>
+        Boolean(
+          getIGDBBackdropUrl(
+            game
+          )
+        )
+    )
+    .sort(
+      (
+        first,
+        second
+      ) => {
+        const firstCount =
+          first.total_rating_count ??
+          0;
+
+        const secondCount =
+          second.total_rating_count ??
+          0;
+
+        /*
+         * Principal:
+         * popularidad.
+         */
+        if (
+          firstCount !==
+          secondCount
+        ) {
+          return (
+            secondCount -
+            firstCount
+          );
+        }
+
+        /*
+         * Empate:
+         * el más reciente primero.
+         */
+        return (
+          (
+            second.first_release_date ??
+            0
+          ) -
+          (
+            first.first_release_date ??
+            0
+          )
+        );
+      }
+    )
+    .slice(
+      0,
+      12
     );
 }
 
@@ -512,14 +722,23 @@ export async function getIGDBGame(
           summary,
           first_release_date,
           cover.image_id,
+          cover.width,
+          cover.height,
+          artworks.image_id,
+          artworks.width,
+          artworks.height,
           screenshots.image_id,
+          screenshots.width,
+          screenshots.height,
           genres.name,
           platforms.name,
           game_type.type,
           version_parent,
           total_rating,
           total_rating_count;
+
         where id = ${id};
+
         limit 1;
       `
     );
@@ -531,7 +750,7 @@ export async function getIGDBGame(
 }
 
 /*
- * IMAGE
+ * IMAGE URL
  */
 
 export function getIGDBImageUrl(
@@ -545,13 +764,184 @@ export function getIGDBImageUrl(
     | "1080p" =
       "cover_big"
 ) {
-  if (
-    !imageId
-  ) {
+  if (!imageId) {
     return null;
   }
 
   return `https://images.igdb.com/igdb/image/upload/t_${size}/${imageId}.jpg`;
+}
+
+/*
+ * LANDSCAPE IMAGE SCORE
+ */
+
+function getLandscapeScore(
+  image:
+    IGDBImage
+) {
+  const width =
+    image.width ??
+    0;
+
+  const height =
+    image.height ??
+    0;
+
+  /*
+   * Si IGDB no trae dimensiones,
+   * permitimos la imagen pero con
+   * prioridad mínima.
+   */
+
+  if (
+    width <=
+      0 ||
+    height <=
+      0
+  ) {
+    return 1;
+  }
+
+  const ratio =
+    width /
+    height;
+
+  /*
+   * Rechazamos imágenes que sean
+   * demasiado verticales/cuadradas.
+   */
+
+  if (
+    ratio <
+    1.35
+  ) {
+    return 0;
+  }
+
+  const targetRatio =
+    16 /
+    9;
+
+  const ratioDifference =
+    Math.abs(
+      ratio -
+      targetRatio
+    );
+
+  const ratioQuality =
+    Math.max(
+      0.25,
+      1 -
+        ratioDifference *
+          0.3
+    );
+
+  /*
+   * Resolución × proximidad a 16:9.
+   */
+
+  return (
+    width *
+    height *
+    ratioQuality
+  );
+}
+
+function getBestLandscapeImage(
+  images:
+    | IGDBImage[]
+    | undefined
+) {
+  if (
+    !images ||
+    images.length ===
+      0
+  ) {
+    return null;
+  }
+
+  return (
+    [...images]
+      .map(
+        (
+          image
+        ) => ({
+          image,
+
+          score:
+            getLandscapeScore(
+              image
+            ),
+        })
+      )
+      .filter(
+        (
+          item
+        ) =>
+          item.score >
+          0
+      )
+      .sort(
+        (
+          first,
+          second
+        ) =>
+          second.score -
+          first.score
+      )[0]
+      ?.image ??
+    null
+  );
+}
+
+/*
+ * BEST GAME BACKDROP
+ */
+
+export function getIGDBBackdropUrl(
+  game:
+    IGDBGame
+) {
+  /*
+   * PRIORIDAD
+   *
+   * 1. Artwork oficial horizontal
+   * 2. Screenshot horizontal
+   * 3. Nada
+   *
+   * No convertimos una portada vertical
+   * en backdrop.
+   */
+
+  const artwork =
+    getBestLandscapeImage(
+      game.artworks
+    );
+
+  if (
+    artwork?.image_id
+  ) {
+    return getIGDBImageUrl(
+      artwork.image_id,
+      "1080p"
+    );
+  }
+
+  const screenshot =
+    getBestLandscapeImage(
+      game.screenshots
+    );
+
+  if (
+    screenshot?.image_id
+  ) {
+    return getIGDBImageUrl(
+      screenshot.image_id,
+      "1080p"
+    );
+  }
+
+  return null;
 }
 
 /*
@@ -563,9 +953,7 @@ export function getIGDBReleaseYear(
     | number
     | undefined
 ) {
-  if (
-    !timestamp
-  ) {
+  if (!timestamp) {
     return null;
   }
 

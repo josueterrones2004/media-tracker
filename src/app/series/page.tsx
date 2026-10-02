@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+
+import {
+  redirect,
+} from "next/navigation";
 
 import LibraryReviewModalCard, {
   type LibraryReview,
@@ -9,6 +12,11 @@ import LibraryReviewModalCard, {
 import {
   shouldUseOriginalImage,
 } from "@/lib/image-optimization";
+
+import {
+  getMediaArtworkOverrides,
+  type MediaArtworkOverride,
+} from "@/lib/media-artwork";
 
 import {
   createClient,
@@ -46,17 +54,67 @@ type LastEpisode = {
   episodeTitle: string;
 };
 
+type ArtworkProps = {
+  coverUrl:
+    | string
+    | null;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
+};
+
+function getArtwork(
+  original:
+    string |
+    null,
+
+  override:
+    MediaArtworkOverride |
+    undefined
+): ArtworkProps {
+  return {
+    coverUrl:
+      override?.poster_url ??
+      original,
+
+    positionX:
+      override
+        ?.poster_position_x ??
+      50,
+
+    positionY:
+      override
+        ?.poster_position_y ??
+      50,
+
+    zoom:
+      override
+        ?.poster_zoom ??
+      1,
+  };
+}
+
 export default async function SeriesPage() {
   const supabase =
     await createClient();
 
   const {
-    data: { user },
+    data: {
+      user,
+    },
   } =
     await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect(
+      "/auth"
+    );
   }
 
   const [
@@ -66,7 +124,9 @@ export default async function SeriesPage() {
   ] =
     await Promise.all([
       supabase
-        .from("library_items")
+        .from(
+          "library_items"
+        )
         .select(`
           id,
           external_id,
@@ -99,7 +159,9 @@ export default async function SeriesPage() {
         ),
 
       supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .select(`
           id,
           external_id,
@@ -190,27 +252,83 @@ export default async function SeriesPage() {
   }
 
   const library =
-    (libraryResult.data ??
-      []) as LibrarySeries[];
+    (
+      libraryResult.data ??
+      []
+    ) as LibrarySeries[];
 
   const watched =
-    (reviewsResult.data ??
-      []) as LibraryReview[];
+    (
+      reviewsResult.data ??
+      []
+    ) as LibraryReview[];
 
   const episodeWatches =
-    (episodesResult.data ??
-      []) as EpisodeWatchRow[];
+    (
+      episodesResult.data ??
+      []
+    ) as EpisodeWatchRow[];
+
+  /*
+   * Cargamos overrides tanto para biblioteca
+   * como para reviews.
+   */
+
+  const overrides =
+    await getMediaArtworkOverrides(
+      "series",
+      [
+        ...library.map(
+          (
+            show
+          ) =>
+            show.external_id
+        ),
+
+        ...watched.map(
+          (
+            review
+          ) =>
+            review.external_id
+        ),
+      ]
+    );
+
+  const watchedWithArtwork =
+    watched.map(
+      (
+        review
+      ) => {
+        const override =
+          overrides.get(
+            review.external_id
+          );
+
+        return {
+          ...review,
+
+          cover_url:
+            override
+              ?.poster_url ??
+            review.cover_url,
+        };
+      }
+    );
 
   const watching =
     library.filter(
-      (show) =>
+      (
+        show
+      ) =>
         show.status ===
         "IN_PROGRESS"
     );
 
   const pending =
     library.filter(
-      (show) =>
+      (
+        show
+      ) =>
         show.status ===
         "PENDING"
     );
@@ -273,12 +391,24 @@ export default async function SeriesPage() {
         ) : (
           <div className="mt-5 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {watching.map(
-              (show) => (
+              (
+                show
+              ) => (
                 <WatchingSeriesCard
                   key={
                     show.id
                   }
-                  show={show}
+                  show={
+                    show
+                  }
+                  artwork={
+                    getArtwork(
+                      show.cover_url,
+                      overrides.get(
+                        show.external_id
+                      )
+                    )
+                  }
                   lastEpisode={
                     lastEpisodeBySeries.get(
                       show.external_id
@@ -296,15 +426,17 @@ export default async function SeriesPage() {
           Vistas
         </h2>
 
-        {watched.length ===
+        {watchedWithArtwork.length ===
         0 ? (
           <p className="mt-4 text-zinc-500">
             Todavía no has marcado ninguna serie como vista.
           </p>
         ) : (
           <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-            {watched.map(
-              (review) => (
+            {watchedWithArtwork.map(
+              (
+                review
+              ) => (
                 <LibraryReviewModalCard
                   key={
                     review.id
@@ -333,12 +465,24 @@ export default async function SeriesPage() {
         ) : (
           <div className="mt-5 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {pending.map(
-              (show) => (
+              (
+                show
+              ) => (
                 <SeriesLibraryCard
                   key={
                     show.id
                   }
-                  show={show}
+                  show={
+                    show
+                  }
+                  artwork={
+                    getArtwork(
+                      show.cover_url,
+                      overrides.get(
+                        show.external_id
+                      )
+                    )
+                  }
                   label="Pendiente"
                 />
               )
@@ -352,9 +496,14 @@ export default async function SeriesPage() {
 
 function WatchingSeriesCard({
   show,
+  artwork,
   lastEpisode,
 }: {
-  show: LibrarySeries;
+  show:
+    LibrarySeries;
+
+  artwork:
+    ArtworkProps;
 
   lastEpisode:
     | LastEpisode
@@ -366,15 +515,19 @@ function WatchingSeriesCard({
       className="block"
     >
       <SeriesCover
-        title={show.title}
-        coverUrl={
-          show.cover_url
+        title={
+          show.title
+        }
+        artwork={
+          artwork
         }
       />
 
       <div className="mt-3">
         <h3 className="font-semibold text-zinc-100">
-          {show.title}
+          {
+            show.title
+          }
         </h3>
 
         <div className="mt-1 flex gap-2 text-sm text-zinc-500">
@@ -386,7 +539,9 @@ function WatchingSeriesCard({
                 }
               </span>
 
-              <span>·</span>
+              <span>
+                ·
+              </span>
             </>
           )}
 
@@ -428,10 +583,17 @@ function WatchingSeriesCard({
 
 function SeriesLibraryCard({
   show,
+  artwork,
   label,
 }: {
-  show: LibrarySeries;
-  label: string;
+  show:
+    LibrarySeries;
+
+  artwork:
+    ArtworkProps;
+
+  label:
+    string;
 }) {
   return (
     <Link
@@ -439,15 +601,19 @@ function SeriesLibraryCard({
       className="block"
     >
       <SeriesCover
-        title={show.title}
-        coverUrl={
-          show.cover_url
+        title={
+          show.title
+        }
+        artwork={
+          artwork
         }
       />
 
       <div className="mt-3">
         <h3 className="font-semibold text-zinc-100">
-          {show.title}
+          {
+            show.title
+          }
         </h3>
 
         <div className="mt-1 flex gap-2 text-sm text-zinc-500">
@@ -459,12 +625,16 @@ function SeriesLibraryCard({
                 }
               </span>
 
-              <span>·</span>
+              <span>
+                ·
+              </span>
             </>
           )}
 
           <span>
-            {label}
+            {
+              label
+            }
           </span>
         </div>
       </div>
@@ -474,28 +644,42 @@ function SeriesLibraryCard({
 
 function SeriesCover({
   title,
-  coverUrl,
+  artwork,
 }: {
-  title: string;
-  coverUrl: string | null;
+  title:
+    string;
+
+  artwork:
+    ArtworkProps;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition hover:border-zinc-400">
-      {coverUrl ? (
+    <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition hover:border-zinc-400">
+      {artwork.coverUrl ? (
         <Image
-          src={coverUrl}
-          alt={title}
-          width={500}
-          height={750}
+          src={
+            artwork.coverUrl
+          }
+          alt={
+            title
+          }
+          fill
           unoptimized={
             shouldUseOriginalImage(
-              coverUrl
+              artwork.coverUrl
             )
           }
-          className="aspect-[2/3] w-full object-cover"
+          sizes="250px"
+          className="object-cover"
+          style={{
+            objectPosition:
+              `${artwork.positionX}% ${artwork.positionY}%`,
+
+            transform:
+              `scale(${artwork.zoom})`,
+          }}
         />
       ) : (
-        <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
+        <div className="flex h-full items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
           Sin imagen
         </div>
       )}

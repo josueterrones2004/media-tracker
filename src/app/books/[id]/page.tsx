@@ -6,6 +6,10 @@ import {
 import MediaDetailLayout from "@/components/media/MediaDetailLayout";
 
 import {
+  getMediaArtworkOverride,
+} from "@/lib/media-artwork";
+
+import {
   getAuthorDetails,
   getBookDescription,
   getBookDetails,
@@ -20,19 +24,6 @@ interface BookPageProps {
   }>;
 }
 
-/*
- * Open Library puede devolver subjects bastante
- * desordenados:
- *
- * - duplicados
- * - etiquetas internas
- * - categorías separadas por comas
- * - diferencias como Science-fiction / Science fiction
- *
- * Aquí los convertimos en unas pocas etiquetas
- * útiles para la interfaz.
- */
-
 function cleanSubjects(
   subjects:
     | string[]
@@ -43,15 +34,15 @@ function cleanSubjects(
     [];
 
   const seen =
-    new Set<string>();
+    new Set<
+      string
+    >();
 
   for (
     const rawSubject
-    of subjects ?? []
+    of subjects ??
+    []
   ) {
-    /*
-     * Algunos subjects contienen varias categorías.
-     */
     const parts =
       rawSubject.split(
         /[,;]+/
@@ -73,18 +64,12 @@ function cleanSubjects(
             " "
           );
 
-      if (
-        !subject
-      ) {
+      if (!subject) {
         continue;
       }
 
       const normalized =
         subject.toLowerCase();
-
-      /*
-       * Metadata / categorías poco útiles.
-       */
 
       if (
         normalized.startsWith(
@@ -112,10 +97,6 @@ function cleanSubjects(
         continue;
       }
 
-      /*
-       * Etiquetas demasiado genéricas o poco útiles.
-       */
-
       if (
         normalized ===
           "general" ||
@@ -127,20 +108,12 @@ function cleanSubjects(
         continue;
       }
 
-      /*
-       * Evitamos frases enormes.
-       */
-
       if (
         subject.length >
         32
       ) {
         continue;
       }
-
-      /*
-       * Normalizaciones visuales comunes.
-       */
 
       if (
         normalized ===
@@ -183,10 +156,6 @@ function cleanSubjects(
         subject
       );
 
-      /*
-       * No queremos convertir la ficha
-       * en una nube de etiquetas.
-       */
       if (
         result.length >=
         4
@@ -207,37 +176,40 @@ export default async function BookPage({
   } =
     await params;
 
-  const book =
-    await getBookDetails(
-      id
-    );
+  const [
+    book,
+    override,
+  ] =
+    await Promise.all([
+      getBookDetails(
+        id
+      ),
 
-  /*
-   * DESCRIPTION
-   */
+      getMediaArtworkOverride(
+        "book",
+        id
+      ),
+    ]);
 
   const description =
     getBookDescription(
       book.description
     );
 
-  /*
-   * COVER
-   */
-
   const coverId =
     book.covers?.[0] ??
     null;
 
-  const cover =
+  const automaticCover =
     getOpenLibraryCoverUrl(
       coverId,
       "L"
     );
 
-  /*
-   * AUTHORS
-   */
+  const cover =
+    override
+      ?.poster_url ??
+    automaticCover;
 
   const authorKeys =
     book.authors
@@ -289,18 +261,10 @@ export default async function BookPage({
           author.name
       );
 
-  /*
-   * SUBJECTS
-   */
-
   const subjects =
     cleanSubjects(
       book.subjects
     );
-
-  /*
-   * HERO META
-   */
 
   const meta:
     string[] =
@@ -316,10 +280,6 @@ export default async function BookPage({
       )
     );
   }
-
-  /*
-   * INFORMATION
-   */
 
   const information = [
     {
@@ -373,6 +333,21 @@ export default async function BookPage({
       }
       backdropUrl={
         null
+      }
+      coverPositionX={
+        override
+          ?.poster_position_x ??
+        50
+      }
+      coverPositionY={
+        override
+          ?.poster_position_y ??
+        50
+      }
+      coverZoom={
+        override
+          ?.poster_zoom ??
+        1
       }
       meta={
         meta

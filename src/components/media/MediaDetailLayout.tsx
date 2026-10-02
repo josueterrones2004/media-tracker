@@ -35,6 +35,14 @@ export interface MediaDetailLayoutProps {
     | string
     | null;
 
+  coverPositionX?: number;
+  coverPositionY?: number;
+  coverZoom?: number;
+
+  backdropPositionX?: number;
+  backdropPositionY?: number;
+  backdropZoom?: number;
+
   heroMode?: MediaHeroMode;
 
   meta?: string[];
@@ -61,7 +69,17 @@ export default function MediaDetailLayout({
   eyebrow,
   coverUrl,
   backdropUrl,
+
+  coverPositionX = 50,
+  coverPositionY = 50,
+  coverZoom = 1,
+
+  backdropPositionX = 50,
+  backdropPositionY = 50,
+  backdropZoom = 1,
+
   heroMode = "backdrop",
+
   meta = [],
   tags = [],
   description,
@@ -69,6 +87,7 @@ export default function MediaDetailLayout({
   children,
   mainContent,
   bottomContent,
+
   noDescriptionText =
     "No hay una descripción disponible.",
 }: MediaDetailLayoutProps) {
@@ -88,23 +107,32 @@ export default function MediaDetailLayout({
 
       <div className="w-[155px] shrink-0 sm:w-[190px] lg:w-[205px]">
         {coverUrl ? (
-          <Image
-            src={
-              coverUrl
-            }
-            alt={
-              title
-            }
-            width={500}
-            height={750}
-            priority
-            unoptimized={
-              shouldUseOriginalImage(
+          <div className="aspect-[2/3] w-full overflow-hidden rounded-xl border border-zinc-700/70 bg-zinc-900 shadow-2xl shadow-black/60">
+            <Image
+              src={
                 coverUrl
-              )
-            }
-            className="aspect-[2/3] w-full rounded-xl border border-zinc-700/70 object-cover shadow-2xl shadow-black/60"
-          />
+              }
+              alt={
+                title
+              }
+              width={500}
+              height={750}
+              priority
+              unoptimized={
+                shouldUseOriginalImage(
+                  coverUrl
+                )
+              }
+              className="h-full w-full object-cover"
+              style={{
+                objectPosition:
+                  `${coverPositionX}% ${coverPositionY}%`,
+
+                transform:
+                  `scale(${coverZoom})`,
+              }}
+            />
+          </div>
         ) : (
           <div className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-center text-zinc-600 shadow-2xl">
             <ImageOff
@@ -118,7 +146,7 @@ export default function MediaDetailLayout({
         )}
       </div>
 
-      {/* TITLE / META / ACTIONS */}
+      {/* TITLE */}
 
       <div className="min-w-0 flex-1 pb-1 sm:pb-3 lg:pb-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -128,8 +156,6 @@ export default function MediaDetailLayout({
         <h1 className="mt-2 max-w-4xl text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl lg:text-[44px] lg:leading-[1.08]">
           {title}
         </h1>
-
-        {/* META */}
 
         {cleanMeta.length >
           0 && (
@@ -159,8 +185,6 @@ export default function MediaDetailLayout({
           </div>
         )}
 
-        {/* TAGS */}
-
         {tags.length >
           0 && (
           <div className="mt-5 flex flex-wrap gap-2">
@@ -181,8 +205,6 @@ export default function MediaDetailLayout({
           </div>
         )}
 
-        {/* ACTIONS */}
-
         {children && (
           <div className="[&>section]:mt-6">
             {children}
@@ -194,13 +216,9 @@ export default function MediaDetailLayout({
 
   return (
     <main className="mx-auto max-w-[1280px] pb-24">
-      {/* HERO */}
-
       {heroMode ===
       "backdrop" ? (
         <section className="relative">
-          {/* BACKDROP */}
-
           <div className="relative h-[280px] overflow-hidden bg-zinc-950 sm:h-[360px] lg:h-[470px]">
             {backdropUrl ? (
               <Image
@@ -216,7 +234,14 @@ export default function MediaDetailLayout({
                   )
                 }
                 sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover object-center"
+                className="object-cover"
+                style={{
+                  objectPosition:
+                    `${backdropPositionX}% ${backdropPositionY}%`,
+
+                  transform:
+                    `scale(${backdropZoom})`,
+                }}
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-zinc-900 text-zinc-800">
@@ -226,54 +251,28 @@ export default function MediaDetailLayout({
               </div>
             )}
 
-            {/* BASE */}
-
-            <div className="absolute inset-0 bg-black/10" />
-
-            {/* TOP */}
-
-            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/45 via-transparent to-transparent" />
-
-            {/* BOTTOM */}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent" />
-
-            <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-zinc-950 via-zinc-950/75 to-transparent" />
-
             {/* LEFT */}
 
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-zinc-950/25 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[22%] bg-gradient-to-r from-zinc-950 via-zinc-950/55 to-transparent" />
 
             {/* RIGHT */}
 
-            <div className="absolute inset-0 bg-gradient-to-l from-zinc-950/90 via-zinc-950/20 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-[22%] bg-gradient-to-l from-zinc-950 via-zinc-950/55 to-transparent" />
 
-            {/* EDGE FADES */}
+            {/* BOTTOM */}
 
-            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-950 to-transparent sm:w-36 lg:w-48" />
-
-            <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-950 to-transparent sm:w-36 lg:w-48" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t from-zinc-950 via-zinc-950/45 to-transparent" />
           </div>
-
-          {/* CONTENT */}
 
           <div className="relative z-10 -mt-24 px-4 sm:-mt-32 sm:px-6 lg:-mt-36 lg:px-8">
             {heroContent}
           </div>
         </section>
       ) : (
-        /*
-         * COMPACT MODE
-         *
-         * Pensado para medios que no tienen
-         * un backdrop real, como libros.
-         */
         <section className="px-4 pt-10 sm:px-6 sm:pt-12 lg:px-8 lg:pt-14">
           {heroContent}
         </section>
       )}
-
-      {/* DETAILS */}
 
       <div
         className={`grid items-start gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_290px] lg:px-8 ${
@@ -283,11 +282,7 @@ export default function MediaDetailLayout({
             : "mt-12"
         }`}
       >
-        {/* MAIN COLUMN */}
-
         <section className="min-w-0">
-          {/* SYNOPSIS */}
-
           <div className="border-b border-zinc-800 pb-3">
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
               Sinopsis
@@ -301,16 +296,12 @@ export default function MediaDetailLayout({
             </p>
           </div>
 
-          {/* MEDIA-SPECIFIC CONTENT */}
-
           {mainContent && (
             <div className="mt-10">
               {mainContent}
             </div>
           )}
         </section>
-
-        {/* INFORMATION */}
 
         {information.length >
           0 && (
@@ -346,8 +337,6 @@ export default function MediaDetailLayout({
           </aside>
         )}
       </div>
-
-      {/* FULL WIDTH CONTENT */}
 
       {bottomContent && (
         <div className="mt-12 px-4 sm:px-6 lg:px-8">

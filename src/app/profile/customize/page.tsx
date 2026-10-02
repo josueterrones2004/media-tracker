@@ -220,7 +220,7 @@ export default async function CustomizeProfilePage() {
       : defaultSections;
 
   return (
-    <main className="pb-20">
+    <main className="mx-auto w-full max-w-[1100px] border-x-0 border-zinc-800/80 bg-zinc-950 pb-20 lg:border-x">
       <ProfileCustomizeEditor
         userId={
           user.id

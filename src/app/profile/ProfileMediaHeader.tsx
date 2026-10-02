@@ -169,7 +169,7 @@ export default function ProfileMediaHeader({
     <section id="perfil">
       {/* BANNER */}
 
-      <div className="relative h-[175px] w-full overflow-hidden bg-zinc-900 sm:h-[220px] lg:aspect-[3/1] lg:h-auto">
+      <div className="relative h-[175px] w-full overflow-hidden bg-zinc-900 sm:h-[220px] lg:h-[300px]">
         {banner}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-950/60 to-transparent" />

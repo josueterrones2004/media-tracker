@@ -11,12 +11,17 @@ import {
 import MediaDetailLayout from "@/components/media/MediaDetailLayout";
 
 import {
+  getIGDBBackdropUrl,
   getIGDBGame,
   getIGDBGameTypeLabel,
   getIGDBImageUrl,
   getIGDBReleaseYear,
   normalizeIGDBGameType,
 } from "@/lib/igdb";
+
+import {
+  getMediaArtworkOverride,
+} from "@/lib/media-artwork";
 
 import GameActions from "./GameActions";
 
@@ -27,17 +32,19 @@ interface GamePageProps {
 }
 
 function getGameTypeLabel(
-  game: NonNullable<
-    Awaited<
-      ReturnType<
-        typeof getIGDBGame
+  game:
+    NonNullable<
+      Awaited<
+        ReturnType<
+          typeof getIGDBGame
+        >
       >
     >
-  >
 ) {
   const type =
     normalizeIGDBGameType(
-      game.game_type?.type
+      game.game_type
+        ?.type
     );
 
   if (
@@ -67,35 +74,46 @@ export default async function GamePage({
   } =
     await params;
 
-  const game =
-    await getIGDBGame(
-      id
-    );
+  const [
+    game,
+    override,
+  ] =
+    await Promise.all([
+      getIGDBGame(
+        id
+      ),
+
+      getMediaArtworkOverride(
+        "game",
+        id
+      ),
+    ]);
 
   if (!game) {
     notFound();
   }
 
-  /*
-   * IMAGES
-   */
-
-  const cover =
+  const automaticCover =
     getIGDBImageUrl(
-      game.cover?.image_id,
+      game.cover
+        ?.image_id,
       "cover_big"
     );
 
-  const backdrop =
-    getIGDBImageUrl(
-      game.screenshots?.[0]
-        ?.image_id,
-      "1080p"
+  const automaticBackdrop =
+    getIGDBBackdropUrl(
+      game
     );
 
-  /*
-   * BASIC INFORMATION
-   */
+  const cover =
+    override
+      ?.poster_url ??
+    automaticCover;
+
+  const backdrop =
+    override
+      ?.backdrop_url ??
+    automaticBackdrop;
 
   const releaseYear =
     getIGDBReleaseYear(
@@ -115,11 +133,8 @@ export default async function GamePage({
     game.genres ??
     [];
 
-  /*
-   * HERO META
-   */
-
-  const meta: string[] =
+  const meta:
+    string[] =
     [];
 
   if (
@@ -154,10 +169,6 @@ export default async function GamePage({
     );
   }
 
-  /*
-   * TAGS
-   */
-
   const tags =
     genres.map(
       (
@@ -165,10 +176,6 @@ export default async function GamePage({
       ) =>
         genre.name
     );
-
-  /*
-   * INFORMATION SIDEBAR
-   */
 
   const information = [
     ...(releaseYear
@@ -247,6 +254,36 @@ export default async function GamePage({
       }
       backdropUrl={
         backdrop
+      }
+      coverPositionX={
+        override
+          ?.poster_position_x ??
+        50
+      }
+      coverPositionY={
+        override
+          ?.poster_position_y ??
+        50
+      }
+      coverZoom={
+        override
+          ?.poster_zoom ??
+        1
+      }
+      backdropPositionX={
+        override
+          ?.backdrop_position_x ??
+        50
+      }
+      backdropPositionY={
+        override
+          ?.backdrop_position_y ??
+        50
+      }
+      backdropZoom={
+        override
+          ?.backdrop_zoom ??
+        1
       }
       meta={
         meta

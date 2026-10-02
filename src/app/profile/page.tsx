@@ -2,6 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
+  getMediaArtworkMapKey,
+  getMixedMediaArtworkOverrides,
+  type MediaArtworkOverride,
+} from "@/lib/media-artwork";
+
+import {
   BookOpen,
   Clapperboard,
   Gamepad2,
@@ -46,6 +52,17 @@ type MediaType =
   | "SERIES"
   | "BOOK"
   | "GAME";
+
+  type ArtworkFields = {
+    poster_position_x?:
+      number;
+
+    poster_position_y?:
+      number;
+
+    poster_zoom?:
+      number;
+  };
 
 type SectionKey =
   | "ACTIVITY"
@@ -114,14 +131,16 @@ type ProfileFavoriteRow = {
   external_id:
     string;
 
-  title: string;
+  title:
+    string;
 
   cover_url:
     | string
     | null;
 
-  position: number;
-};
+  position:
+    number;
+} & ArtworkFields;
 
 type LibraryItemRow = {
   id: string;
@@ -132,14 +151,16 @@ type LibraryItemRow = {
   external_id:
     string;
 
-  title: string;
+  title:
+    string;
 
   cover_url:
     | string
     | null;
 
-  status: string;
-};
+  status:
+    string;
+} & ArtworkFields;
 
 type ReviewRow = {
   id: string;
@@ -150,14 +171,16 @@ type ReviewRow = {
   external_id:
     string;
 
-  title: string;
+  title:
+    string;
 
   cover_url:
     | string
     | null;
 
-  created_at: string;
-};
+  created_at:
+    string;
+} & ArtworkFields;
 
 interface ProfilePageProps {
   searchParams: Promise<{
@@ -534,23 +557,96 @@ export default async function ProfilePage({
       []
     ) as ProfileSectionRow[];
 
-  const favorites =
+  const rawFavorites =
     (
       favoritesResult.data ??
       []
     ) as ProfileFavoriteRow[];
 
-  const library =
+  const rawLibrary =
     (
       libraryResult.data ??
       []
     ) as LibraryItemRow[];
 
-  const reviews =
+  const rawReviews =
     (
       reviewsResult.data ??
       []
     ) as ReviewRow[];
+
+  const artworkOverrides =
+    await getMixedMediaArtworkOverrides([
+      ...rawFavorites,
+      ...rawLibrary,
+      ...rawReviews,
+    ]);
+
+  function applyArtwork<
+    T extends {
+      media_type:
+        MediaType;
+
+      external_id:
+        string;
+
+      cover_url:
+        | string
+        | null;
+    }
+  >(
+    item:
+      T
+  ): T &
+    ArtworkFields {
+    const override:
+      | MediaArtworkOverride
+      | undefined =
+      artworkOverrides.get(
+        getMediaArtworkMapKey(
+          item.media_type,
+          item.external_id
+        )
+      );
+
+    return {
+      ...item,
+
+      cover_url:
+        override?.poster_url ??
+        item.cover_url,
+
+      poster_position_x:
+        override
+          ?.poster_position_x ??
+        50,
+
+      poster_position_y:
+        override
+          ?.poster_position_y ??
+        50,
+
+      poster_zoom:
+        override
+          ?.poster_zoom ??
+        1,
+    };
+  }
+
+  const favorites =
+    rawFavorites.map(
+      applyArtwork
+    );
+
+  const library =
+    rawLibrary.map(
+      applyArtwork
+    );
+
+  const reviews =
+    rawReviews.map(
+      applyArtwork
+    );
 
   const followersCount =
     followersResult.count ??
@@ -1037,6 +1133,14 @@ export default async function ProfilePage({
                               )
                             }
                             className="h-14 w-10 shrink-0 object-cover"
+
+                            style={{
+                              objectPosition:
+                                `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
+
+                              transform:
+                                `scale(${item.poster_zoom ?? 1})`,
+                            }}
                           />
                         ) : (
                           <div className="h-14 w-10 shrink-0 bg-zinc-900" />
@@ -1102,6 +1206,14 @@ export default async function ProfilePage({
                               )
                             }
                             className="h-14 w-10 shrink-0 object-cover"
+
+                            style={{
+                              objectPosition:
+                                `${review.poster_position_x ?? 50}% ${review.poster_position_y ?? 50}%`,
+
+                              transform:
+                                `scale(${review.poster_zoom ?? 1})`,
+                            }}
                           />
                         ) : (
                           <div className="h-14 w-10 shrink-0 bg-zinc-900" />

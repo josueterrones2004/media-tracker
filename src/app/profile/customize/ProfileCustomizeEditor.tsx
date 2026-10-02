@@ -1972,423 +1972,459 @@ export default function ProfileCustomizeEditor({
     }
   }
 
-  return (
-    <>
-      {/* EDITOR HEADER */}
+    return (
+      <div className="mx-auto w-full max-w-[1100px] bg-zinc-950 lg:border-x lg:border-zinc-900">
+        {/* STICKY EDITOR HEADER */}
 
-      <div className="flex h-16 items-center border-b border-zinc-800 px-4 lg:px-6">
-        <Link
-          href="/profile"
-          className="mr-3 rounded-full p-2 text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
-          aria-label="Volver al perfil"
-        >
-          <ArrowLeft
-            size={20}
-          />
-        </Link>
-
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-100">
-            Editar perfil
-          </h1>
-
-          {dirty && (
-            <p className="text-xs text-amber-400/80">
-              Cambios sin guardar
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* PROFILE */}
-
-      <ProfileMediaHeader
-        banner={
-          <div className="relative h-full w-full">
-            {bannerPreview ? (
-              <CroppedProfileImage
-                src={
-                  bannerPreview
-                }
-                crop={
-                  bannerCrop
-                }
-                alt="Banner"
+        <div className="sticky top-[70px] z-[90] flex min-h-16 items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2 backdrop-blur-xl sm:px-4 lg:px-6">
+          <div className="flex min-w-0 items-center">
+            <Link
+              href="/profile"
+              className="mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-900 hover:text-white sm:mr-3"
+              aria-label="Volver al perfil"
+            >
+              <ArrowLeft
+                size={20}
               />
-            ) : (
-              <div className="h-full w-full bg-zinc-900" />
-            )}
+            </Link>
 
-            <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/15">
-              <button
-                type="button"
-                onClick={() =>
-                  bannerInputRef.current?.click()
-                }
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur transition hover:bg-black/80"
-                aria-label="Cambiar banner"
-              >
-                <Camera
-                  size={19}
-                />
-              </button>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold text-zinc-100 sm:text-xl">
+                Editar perfil
+              </h1>
 
-              {bannerPreview && (
-                <button
-                  type="button"
-                  onClick={
-                    deleteBanner
-                  }
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur transition hover:bg-red-500/90"
-                  aria-label="Quitar banner"
+              {(dirty ||
+                saving ||
+                message) && (
+                <p
+                  role="status"
+                  className={`mt-0.5 truncate text-xs ${
+                    message.startsWith(
+                      "Error:"
+                    )
+                      ? "text-red-400"
+                      : saving
+                        ? "text-zinc-500"
+                        : dirty
+                          ? "text-amber-400/80"
+                          : "text-emerald-400/80"
+                  }`}
                 >
-                  <Trash2
-                    size={19}
-                  />
-                </button>
+                  {message.startsWith(
+                    "Error:"
+                  )
+                    ? message
+                    : saving
+                      ? "Guardando cambios..."
+                      : dirty
+                        ? "Cambios sin guardar"
+                        : message}
+                </p>
               )}
             </div>
           </div>
-        }
-        avatar={
-          <div className="relative h-full w-full">
-            {avatarPreview ? (
-              <CroppedProfileImage
-                src={
-                  avatarPreview
-                }
-                crop={
-                  avatarCrop
-                }
-                alt="Foto de perfil"
+
+          <button
+            type="button"
+            disabled={
+              !dirty ||
+              saving
+            }
+            onClick={() => {
+              void saveAll();
+            }}
+            className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-fuchsia-500 px-3 text-sm font-semibold text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:bg-zinc-900 disabled:text-zinc-600 sm:px-4"
+          >
+            {saving ? (
+              <Loader2
+                size={17}
+                className="animate-spin"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-2xl font-bold text-zinc-500">
-                {(displayName ||
-                  savedUsername ||
-                  "?")
-                  .slice(
-                    0,
-                    1
-                  )
-                  .toUpperCase()}
-              </div>
+              <Save
+                size={17}
+              />
             )}
 
-            <button
-              type="button"
-              onClick={() =>
-                avatarInputRef.current?.click()
-              }
-              className="absolute inset-0 flex items-center justify-center bg-black/25 text-white"
-              aria-label="Cambiar foto"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/65 backdrop-blur">
-                <Camera
-                  size={18}
-                />
-              </span>
-            </button>
-          </div>
-        }
-      >
-        <div className="text-left">
-          <h2 className="text-2xl font-bold text-zinc-100">
-            {displayName ||
-              savedUsername ||
-              "Usuario"}
-          </h2>
-
-          {username && (
-            <p className="mt-1 text-sm text-zinc-500">
-              @{username}
-            </p>
-          )}
-
-          {bio.trim() && (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-400">
-              {bio}
-            </p>
-          )}
-        </div>
-      </ProfileMediaHeader>
-
-      <input
-        ref={
-          avatarInputRef
-        }
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        className="hidden"
-        onChange={(
-          event
-        ) =>
-          handleImage(
-            "avatar",
-            event
-          )
-        }
-      />
-
-      <input
-        ref={
-          bannerInputRef
-        }
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        className="hidden"
-        onChange={(
-          event
-        ) =>
-          handleImage(
-            "banner",
-            event
-          )
-        }
-      />
-
-      {/* PROFILE FIELDS */}
-
-      <div className="space-y-4 px-4 py-8 lg:px-6">
-        <EditorField
-          label="Nombre"
-        >
-          <input
-            value={
-              displayName
-            }
-            maxLength={
-              50
-            }
-            onChange={(
-              event
-            ) => {
-              setDisplayName(
-                event.target.value
-              );
-
-              markDirty();
-            }}
-            className="w-full bg-transparent py-1 text-base text-zinc-100 outline-none"
-          />
-        </EditorField>
-
-        <EditorField
-          label="Nombre de usuario"
-        >
-          <div className="flex">
-            <span className="py-1 text-zinc-600">
-              @
+            <span>
+              {saving
+                ? "Guardando..."
+                : "Guardar"}
             </span>
+          </button>
+        </div>
 
-            <input
-              value={
-                username
-              }
-              onChange={(
-                event
-              ) => {
-                setUsername(
-                  event.target.value
-                );
+        {/* PROFILE PREVIEW */}
 
-                markDirty();
-              }}
-              className="min-w-0 flex-1 bg-transparent px-1 py-1 text-base text-zinc-100 outline-none"
-            />
-          </div>
-        </EditorField>
+        <ProfileMediaHeader
+          banner={
+            <div className="relative h-full w-full">
+              {bannerPreview ? (
+                <CroppedProfileImage
+                  src={
+                    bannerPreview
+                  }
+                  crop={
+                    bannerCrop
+                  }
+                  alt="Banner"
+                />
+              ) : (
+                <div className="h-full w-full bg-zinc-900" />
+              )}
 
-        <EditorField
-          label="Biografía"
-        >
-          <textarea
-            value={
-              bio
-            }
-            maxLength={
-              300
-            }
-            rows={
-              4
-            }
-            placeholder="Cuéntanos algo sobre ti"
-            onChange={(
-              event
-            ) => {
-              setBio(
-                event.target.value
-              );
+              <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/15">
+                <button
+                  type="button"
+                  onClick={() =>
+                    bannerInputRef.current?.click()
+                  }
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur transition hover:bg-black/80"
+                  aria-label="Cambiar banner"
+                >
+                  <Camera
+                    size={19}
+                  />
+                </button>
 
-              markDirty();
-            }}
-            className="w-full resize-none bg-transparent py-1 text-base leading-6 text-zinc-100 outline-none placeholder:text-zinc-700"
-          />
-
-          <p className="text-right text-xs text-zinc-700">
-            {
-              bio.length
-            }
-            /300
-          </p>
-        </EditorField>
-      </div>
-
-      {/* SECTIONS */}
-
-      <div className="border-t border-zinc-800">
-        {sections
-          .slice()
-          .sort(
-            (
-              a,
-              b
-            ) =>
-              a.position -
-              b.position
-          )
-          .map(
-            (
-              section,
-              index
-            ) => (
-              <ProfileSectionEditor
-                key={
-                  section.section_key
-                }
-                section={
-                  section
-                }
-                index={
-                  index
-                }
-                total={
-                  sections.length
-                }
-                favorites={
-                  favorites
-                }
-                activity={
-                  recentActivity
-                }
-                searchSection={
-                  searchSection
-                }
-                search={
-                  search
-                }
-                searching={
-                  searching
-                }
-                searchResults={
-                  availableResults
-                }
-                searchError={
-                  searchError
-                }
-                onMove={
-                  moveSection
-                }
-                onToggle={
-                  toggleSection
-                }
-                onOpenSearch={
-                  openSearch
-                }
-                onSearchChange={(
-                  value
-                ) => {
-                  setSearch(
-                    value
-                  );
-
-                  setSearchResults(
-                    []
-                  );
-
-                  setSearchError(
-                    ""
-                  );
-                }}
-                onAddFavorite={
-                  addFavorite
-                }
-                onRemoveFavorite={
-                  removeFavorite
-                }
-              />
-            )
-          )}
-      </div>
-
-      {/* ONLY SAVE BUTTON */}
-
-      <div className="border-t border-zinc-800 px-4 py-8 lg:px-6">
-        {message && (
-          <p
-            role="status"
-            className={`mb-4 text-sm ${
-              message.startsWith(
-                "Error:"
-              )
-                ? "text-red-400"
-                : "text-zinc-500"
-            }`}
-          >
-            {
-              message
-            }
-          </p>
-        )}
-
-        <button
-          type="button"
-          disabled={
-            !dirty ||
-            saving
+                {bannerPreview && (
+                  <button
+                    type="button"
+                    onClick={
+                      deleteBanner
+                    }
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur transition hover:bg-red-500/90"
+                    aria-label="Quitar banner"
+                  >
+                    <Trash2
+                      size={19}
+                    />
+                  </button>
+                )}
+              </div>
+            </div>
           }
-          onClick={() => {
-            void saveAll();
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-500 px-5 py-3 font-semibold text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-40 sm:ml-auto sm:w-auto"
+          avatar={
+            <div className="relative h-full w-full">
+              {avatarPreview ? (
+                <CroppedProfileImage
+                  src={
+                    avatarPreview
+                  }
+                  crop={
+                    avatarCrop
+                  }
+                  alt="Foto de perfil"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-2xl font-bold text-zinc-500">
+                  {(displayName ||
+                    savedUsername ||
+                    "?")
+                    .slice(
+                      0,
+                      1
+                    )
+                    .toUpperCase()}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  avatarInputRef.current?.click()
+                }
+                className="absolute inset-0 flex items-center justify-center bg-black/25 text-white"
+                aria-label="Cambiar foto"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/65 backdrop-blur">
+                  <Camera
+                    size={18}
+                  />
+                </span>
+              </button>
+            </div>
+          }
         >
-          {saving ? (
-            <Loader2
-              size={18}
-              className="animate-spin"
-            />
-          ) : (
-            <Save
-              size={18}
+          <div className="max-w-2xl text-left">
+            <h2 className="text-2xl font-bold text-zinc-100">
+              {displayName ||
+                savedUsername ||
+                "Usuario"}
+            </h2>
+
+            {username && (
+              <p className="mt-1 text-sm text-zinc-500">
+                @{username}
+              </p>
+            )}
+
+            {bio.trim() && (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-400">
+                {bio}
+              </p>
+            )}
+          </div>
+        </ProfileMediaHeader>
+
+        {/* HIDDEN FILE INPUTS */}
+
+        <input
+          ref={
+            avatarInputRef
+          }
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(
+            event
+          ) =>
+            handleImage(
+              "avatar",
+              event
+            )
+          }
+        />
+
+        <input
+          ref={
+            bannerInputRef
+          }
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(
+            event
+          ) =>
+            handleImage(
+              "banner",
+              event
+            )
+          }
+        />
+
+        {/* PROFILE FIELDS */}
+
+        <section className="border-t border-zinc-900 px-4 py-7 sm:px-5 lg:px-8 lg:py-9">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-zinc-200">
+              Información del perfil
+            </h2>
+
+            <p className="mt-1 text-sm text-zinc-600">
+              Cambia cómo te ven los demás en Media Tracker.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <EditorField
+              label="Nombre"
+            >
+              <input
+                value={
+                  displayName
+                }
+                maxLength={
+                  50
+                }
+                onChange={(
+                  event
+                ) => {
+                  setDisplayName(
+                    event.target.value
+                  );
+
+                  markDirty();
+                }}
+                className="w-full bg-transparent py-1 text-base text-zinc-100 outline-none"
+              />
+            </EditorField>
+
+            <EditorField
+              label="Nombre de usuario"
+            >
+              <div className="flex">
+                <span className="py-1 text-zinc-600">
+                  @
+                </span>
+
+                <input
+                  value={
+                    username
+                  }
+                  onChange={(
+                    event
+                  ) => {
+                    setUsername(
+                      event.target.value
+                    );
+
+                    markDirty();
+                  }}
+                  className="min-w-0 flex-1 bg-transparent px-1 py-1 text-base text-zinc-100 outline-none"
+                />
+              </div>
+            </EditorField>
+
+            <div className="lg:col-span-2">
+              <EditorField
+                label="Biografía"
+              >
+                <textarea
+                  value={
+                    bio
+                  }
+                  maxLength={
+                    300
+                  }
+                  rows={
+                    4
+                  }
+                  placeholder="Cuéntanos algo sobre ti"
+                  onChange={(
+                    event
+                  ) => {
+                    setBio(
+                      event.target.value
+                    );
+
+                    markDirty();
+                  }}
+                  className="w-full resize-none bg-transparent py-1 text-base leading-6 text-zinc-100 outline-none placeholder:text-zinc-700"
+                />
+
+                <p className="text-right text-xs text-zinc-700">
+                  {
+                    bio.length
+                  }
+                  /300
+                </p>
+              </EditorField>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTIONS */}
+
+        <section className="border-t border-zinc-800">
+          <div className="px-4 pb-3 pt-7 sm:px-5 lg:px-8 lg:pt-9">
+            <h2 className="text-base font-semibold text-zinc-200">
+              Secciones del perfil
+            </h2>
+
+            <p className="mt-1 text-sm text-zinc-600">
+              Elige qué mostrar y en qué orden aparece.
+            </p>
+          </div>
+
+          {sections
+            .slice()
+            .sort(
+              (
+                a,
+                b
+              ) =>
+                a.position -
+                b.position
+            )
+            .map(
+              (
+                section,
+                index
+              ) => (
+                <ProfileSectionEditor
+                  key={
+                    section.section_key
+                  }
+                  section={
+                    section
+                  }
+                  index={
+                    index
+                  }
+                  total={
+                    sections.length
+                  }
+                  favorites={
+                    favorites
+                  }
+                  activity={
+                    recentActivity
+                  }
+                  searchSection={
+                    searchSection
+                  }
+                  search={
+                    search
+                  }
+                  searching={
+                    searching
+                  }
+                  searchResults={
+                    availableResults
+                  }
+                  searchError={
+                    searchError
+                  }
+                  onMove={
+                    moveSection
+                  }
+                  onToggle={
+                    toggleSection
+                  }
+                  onOpenSearch={
+                    openSearch
+                  }
+                  onSearchChange={(
+                    value
+                  ) => {
+                    setSearch(
+                      value
+                    );
+
+                    setSearchResults(
+                      []
+                    );
+
+                    setSearchError(
+                      ""
+                    );
+                  }}
+                  onAddFavorite={
+                    addFavorite
+                  }
+                  onRemoveFavorite={
+                    removeFavorite
+                  }
+                />
+              )
+            )}
+        </section>
+
+        {/* BOTTOM SPACING */}
+
+        <div className="h-16" />
+
+        {cropTarget &&
+          cropImage && (
+            <ImageCropModal
+              image={
+                cropImage
+              }
+              type={
+                cropTarget
+              }
+              onCancel={
+                cancelCrop
+              }
+              onApply={
+                applyCrop
+              }
             />
           )}
-
-          {saving
-            ? "Guardando..."
-            : "Guardar cambios"}
-        </button>
       </div>
-
-      {cropTarget &&
-        cropImage && (
-          <ImageCropModal
-            image={
-              cropImage
-            }
-            type={
-              cropTarget
-            }
-            onCancel={
-              cancelCrop
-            }
-            onApply={
-              applyCrop
-            }
-          />
-        )}
-    </>
-  );
-}
+   );  
+  } 
 
 function EditorField({
   label,

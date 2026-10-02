@@ -8,6 +8,10 @@ import {
 import MediaDetailLayout from "@/components/media/MediaDetailLayout";
 
 import {
+  getMediaArtworkOverride,
+} from "@/lib/media-artwork";
+
+import {
   getSeriesDetails,
 } from "@/lib/tmdb";
 
@@ -104,28 +108,44 @@ export default async function SeriesDetailsPage({
   } =
     await params;
 
+  const [
+    showResult,
+    override,
+  ] =
+    await Promise.all([
+      getSeriesDetails(
+        id
+      ),
+
+      getMediaArtworkOverride(
+        "series",
+        id
+      ),
+    ]);
+
   const show =
-    (await getSeriesDetails(
-      id
-    )) as SeriesDetails;
+    showResult as
+      SeriesDetails;
 
-  /*
-   * IMAGES
-   */
-
-  const poster =
+  const automaticPoster =
     show.poster_path
       ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
       : null;
 
-  const backdrop =
+  const automaticBackdrop =
     show.backdrop_path
       ? `https://image.tmdb.org/t/p/original${show.backdrop_path}`
       : null;
 
-  /*
-   * BASIC INFO
-   */
+  const poster =
+    override
+      ?.poster_url ??
+    automaticPoster;
+
+  const backdrop =
+    override
+      ?.backdrop_url ??
+    automaticBackdrop;
 
   const year =
     show.first_air_date
@@ -151,7 +171,8 @@ export default async function SeriesDetailsPage({
     null;
 
   const genres =
-    show.genres ?? [];
+    show.genres ??
+    [];
 
   const originalName =
     show.original_name &&
@@ -160,11 +181,8 @@ export default async function SeriesDetailsPage({
       ? show.original_name
       : null;
 
-  /*
-   * HERO META
-   */
-
-  const meta: string[] =
+  const meta:
+    string[] =
     [];
 
   if (year) {
@@ -181,7 +199,8 @@ export default async function SeriesDetailsPage({
   ) {
     meta.push(
       `${seasonCount} ${
-        seasonCount === 1
+        seasonCount ===
+        1
           ? "temporada"
           : "temporadas"
       }`
@@ -194,16 +213,13 @@ export default async function SeriesDetailsPage({
   ) {
     meta.push(
       `${episodeCount} ${
-        episodeCount === 1
+        episodeCount ===
+        1
           ? "episodio"
           : "episodios"
       }`
     );
   }
-
-  /*
-   * TAGS
-   */
 
   const tags =
     genres.map(
@@ -212,10 +228,6 @@ export default async function SeriesDetailsPage({
       ) =>
         genre.name
     );
-
-  /*
-   * INFORMATION
-   */
 
   const information = [
     ...(releaseDate
@@ -322,6 +334,36 @@ export default async function SeriesDetailsPage({
       }
       backdropUrl={
         backdrop
+      }
+      coverPositionX={
+        override
+          ?.poster_position_x ??
+        50
+      }
+      coverPositionY={
+        override
+          ?.poster_position_y ??
+        50
+      }
+      coverZoom={
+        override
+          ?.poster_zoom ??
+        1
+      }
+      backdropPositionX={
+        override
+          ?.backdrop_position_x ??
+        50
+      }
+      backdropPositionY={
+        override
+          ?.backdrop_position_y ??
+        50
+      }
+      backdropZoom={
+        override
+          ?.backdrop_zoom ??
+        1
       }
       meta={
         meta

@@ -7,6 +7,10 @@ import {
 import MediaDetailLayout from "@/components/media/MediaDetailLayout";
 
 import {
+  getMediaArtworkOverride,
+} from "@/lib/media-artwork";
+
+import {
   getMovieDetails,
 } from "@/lib/tmdb";
 
@@ -25,25 +29,13 @@ type Genre = {
 
 type MovieDetails = {
   id: number;
-
   title: string;
-
   original_title?: string;
-
   overview?: string;
-
-  poster_path?:
-    | string
-    | null;
-
-  backdrop_path?:
-    | string
-    | null;
-
+  poster_path?: string | null;
+  backdrop_path?: string | null;
   release_date?: string;
-
   runtime?: number;
-
   genres?: Genre[];
 };
 
@@ -52,9 +44,7 @@ function formatReleaseDate(
     | string
     | undefined
 ) {
-  if (
-    !date
-  ) {
+  if (!date) {
     return null;
   }
 
@@ -64,13 +54,10 @@ function formatReleaseDate(
       {
         day:
           "numeric",
-
         month:
           "long",
-
         year:
           "numeric",
-
         timeZone:
           "UTC",
       }
@@ -92,28 +79,43 @@ export default async function MoviePage({
   } =
     await params;
 
+  const [
+    movieResult,
+    artwork,
+  ] =
+    await Promise.all([
+      getMovieDetails(
+        id
+      ),
+
+      getMediaArtworkOverride(
+        "movie",
+        id
+      ),
+    ]);
+
   const movie =
-    (await getMovieDetails(
-      id
-    )) as MovieDetails;
+    movieResult as MovieDetails;
 
-  /*
-   * IMAGES
-   */
-
-  const poster =
+  const automaticPoster =
     movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : null;
 
-  const backdrop =
+  const automaticBackdrop =
     movie.backdrop_path
       ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
       : null;
 
-  /*
-   * BASIC INFO
-   */
+  const poster =
+    artwork
+      ?.poster_url ??
+    automaticPoster;
+
+  const backdrop =
+    artwork
+      ?.backdrop_url ??
+    automaticBackdrop;
 
   const year =
     movie.release_date
@@ -148,17 +150,11 @@ export default async function MoviePage({
       ? movie.original_title
       : null;
 
-  /*
-   * HERO META
-   */
-
   const meta:
     string[] =
     [];
 
-  if (
-    year
-  ) {
+  if (year) {
     meta.push(
       String(
         year
@@ -166,17 +162,11 @@ export default async function MoviePage({
     );
   }
 
-  if (
-    runtime
-  ) {
+  if (runtime) {
     meta.push(
       `${runtime} min`
     );
   }
-
-  /*
-   * TAGS
-   */
 
   const tags =
     genres.map(
@@ -185,10 +175,6 @@ export default async function MoviePage({
       ) =>
         genre.name
     );
-
-  /*
-   * INFORMATION SIDEBAR
-   */
 
   const information = [
     ...(releaseDate
@@ -271,6 +257,36 @@ export default async function MoviePage({
       }
       backdropUrl={
         backdrop
+      }
+      coverPositionX={
+        artwork
+          ?.poster_position_x ??
+        50
+      }
+      coverPositionY={
+        artwork
+          ?.poster_position_y ??
+        50
+      }
+      coverZoom={
+        artwork
+          ?.poster_zoom ??
+        1
+      }
+      backdropPositionX={
+        artwork
+          ?.backdrop_position_x ??
+        50
+      }
+      backdropPositionY={
+        artwork
+          ?.backdrop_position_y ??
+        50
+      }
+      backdropZoom={
+        artwork
+          ?.backdrop_zoom ??
+        1
       }
       meta={
         meta

@@ -9,6 +9,7 @@ import {
   Menu,
   ShieldCheck,
   UserRound,
+  ImageIcon,
   X,
 } from "lucide-react";
 
@@ -118,6 +119,34 @@ function isNavigationActive(
   );
 }
 
+function isMediaDetailRoute(
+  pathname:
+    string
+) {
+  const segments =
+    pathname
+      .split("/")
+      .filter(
+        Boolean
+      );
+
+  if (
+    segments.length !==
+    2
+  ) {
+    return false;
+  }
+
+  return [
+    "movies",
+    "series",
+    "books",
+    "games",
+  ].includes(
+    segments[0]
+  );
+}
+
 function getInitial(
   profile:
     | ShellProfile
@@ -129,7 +158,10 @@ function getInitial(
     "U";
 
   return value
-    .slice(0, 1)
+    .slice(
+      0,
+      1
+    )
     .toUpperCase();
 }
 
@@ -156,19 +188,25 @@ export default function AppShell({
     mobileMenuOpen,
     setMobileMenuOpen,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     profileMenuOpen,
     setProfileMenuOpen,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     loggingOut,
     setLoggingOut,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const isFlushProfileRoute =
     pathname ===
@@ -185,6 +223,12 @@ export default function AppShell({
           Boolean
         ).length ===
         2
+    );
+
+  const isFlushRoute =
+    isFlushProfileRoute ||
+    isMediaDetailRoute(
+      pathname
     );
 
   const displayName =
@@ -208,7 +252,9 @@ export default function AppShell({
     } =
       await supabase.auth.signOut();
 
-    if (error) {
+    if (
+      error
+    ) {
       console.error(
         "Error signing out:",
         error
@@ -270,7 +316,9 @@ export default function AppShell({
 
             <nav className="flex shrink-0 items-center gap-0.5 2xl:gap-1">
               {navigation.map(
-                (item) => {
+                (
+                  item
+                ) => {
                   const active =
                     isNavigationActive(
                       pathname,
@@ -327,8 +375,12 @@ export default function AppShell({
                         alt={
                           displayName
                         }
-                        width={64}
-                        height={64}
+                        width={
+                          64
+                        }
+                        height={
+                          64
+                        }
                         unoptimized
                         className="h-full w-full object-cover"
                       />
@@ -348,7 +400,9 @@ export default function AppShell({
                   </span>
 
                   <ChevronDown
-                    size={14}
+                    size={
+                      14
+                    }
                     className={`shrink-0 text-zinc-600 transition ${
                       profileMenuOpen
                         ? "rotate-180"
@@ -381,7 +435,9 @@ export default function AppShell({
                         className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
                       >
                         <UserRound
-                          size={17}
+                          size={
+                            17
+                          }
                         />
 
                         Perfil
@@ -389,21 +445,39 @@ export default function AppShell({
 
                       {profile?.special_role ===
                         "OWNER" && (
-                        <Link
-                          href="/admin/reports"
-                          onClick={() =>
-                            setProfileMenuOpen(
-                              false
-                            )
-                          }
-                          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
-                        >
-                          <ShieldCheck
-                            size={17}
-                          />
+                        <>
+                          <Link
+                            href="/admin/reports"
+                            onClick={() =>
+                              setProfileMenuOpen(
+                                false
+                              )
+                            }
+                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+                          >
+                            <ShieldCheck
+                              size={17}
+                            />
 
-                          Reportes
-                        </Link>
+                            Reportes
+                          </Link>
+                          
+                          <Link
+                            href="/admin/media"
+                            onClick={() =>
+                              setProfileMenuOpen(
+                                false
+                              )
+                            }
+                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+                          >
+                            <ImageIcon
+                              size={17}
+                            />
+
+                            Media artwork
+                          </Link>
+                        </>
                       )}
 
                       <div className="my-1 border-t border-zinc-800" />
@@ -419,7 +493,9 @@ export default function AppShell({
                         className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-red-400 disabled:opacity-50"
                       >
                         <LogOut
-                          size={17}
+                          size={
+                            17
+                          }
                         />
 
                         {loggingOut
@@ -490,11 +566,15 @@ export default function AppShell({
             >
               {mobileMenuOpen ? (
                 <X
-                  size={21}
+                  size={
+                    21
+                  }
                 />
               ) : (
                 <Menu
-                  size={21}
+                  size={
+                    21
+                  }
                 />
               )}
             </button>
@@ -515,7 +595,15 @@ export default function AppShell({
             />
 
             <div className="fixed inset-x-0 top-[70px] z-50 max-h-[calc(100dvh-70px)] overflow-y-auto border-b border-zinc-800 bg-zinc-950 p-4 shadow-2xl xl:hidden">
-              <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+              <Link
+                href="/profile"
+                onClick={() =>
+                  setMobileMenuOpen(
+                    false
+                  )
+                }
+                className="flex items-center gap-3 border-b border-zinc-800 pb-4 transition hover:opacity-80"
+              >
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800">
                   {profile?.avatar_url ? (
                     <Image
@@ -525,8 +613,12 @@ export default function AppShell({
                       alt={
                         displayName
                       }
-                      width={96}
-                      height={96}
+                      width={
+                        96
+                      }
+                      height={
+                        96
+                      }
                       unoptimized
                       className="h-full w-full object-cover"
                     />
@@ -569,7 +661,7 @@ export default function AppShell({
                     </p>
                   )}
                 </div>
-              </div>
+              </Link>
 
               <Suspense
                 fallback={
@@ -588,7 +680,9 @@ export default function AppShell({
 
               <nav className="space-y-1">
                 {navigation.map(
-                  (item) => {
+                  (
+                    item
+                  ) => {
                     const active =
                       isNavigationActive(
                         pathname,
@@ -667,7 +761,9 @@ export default function AppShell({
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-red-400 disabled:opacity-50"
                 >
                   <LogOut
-                    size={17}
+                    size={
+                      17
+                    }
                   />
 
                   {loggingOut
@@ -682,7 +778,7 @@ export default function AppShell({
 
       <main
         className={
-          isFlushProfileRoute
+          isFlushRoute
             ? "min-w-0 p-0"
             : "min-w-0 p-4 sm:p-6 lg:p-8"
         }

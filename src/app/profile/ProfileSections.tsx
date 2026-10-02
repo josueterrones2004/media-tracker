@@ -1,4 +1,5 @@
 import Image from "next/image";
+
 import Link from "next/link";
 
 import {
@@ -8,6 +9,12 @@ import {
 import {
   shouldUseOriginalImage,
 } from "@/lib/image-optimization";
+
+import {
+  getMediaArtworkOverrides,
+  type MediaArtworkOverride,
+  type MediaArtworkType,
+} from "@/lib/media-artwork";
 
 import ProfileActivity from "./ProfileActivity";
 
@@ -36,7 +43,8 @@ type ProfileSection = {
 };
 
 export type ProfileFavorite = {
-  id: string;
+  id:
+    string;
 
   media_type:
     MediaType;
@@ -72,63 +80,89 @@ interface ProfileSectionsProps {
     boolean;
 }
 
-const DEFAULT_SECTIONS: ProfileSection[] =
-  [
-    {
-      section_key:
-        "ACTIVITY",
+type ArtworkMaps = {
+  movie:
+    Map<
+      string,
+      MediaArtworkOverride
+    >;
 
-      visible:
-        true,
+  series:
+    Map<
+      string,
+      MediaArtworkOverride
+    >;
 
-      position:
-        1,
-    },
+  book:
+    Map<
+      string,
+      MediaArtworkOverride
+    >;
 
-    {
-      section_key:
-        "FAVORITE_MOVIES",
+  game:
+    Map<
+      string,
+      MediaArtworkOverride
+    >;
+};
 
-      visible:
-        true,
+const DEFAULT_SECTIONS:
+  ProfileSection[] = [
+  {
+    section_key:
+      "ACTIVITY",
 
-      position:
-        2,
-    },
+    visible:
+      true,
 
-    {
-      section_key:
-        "FAVORITE_SERIES",
+    position:
+      1,
+  },
 
-      visible:
-        true,
+  {
+    section_key:
+      "FAVORITE_MOVIES",
 
-      position:
-        3,
-    },
+    visible:
+      true,
 
-    {
-      section_key:
-        "FAVORITE_BOOKS",
+    position:
+      2,
+  },
 
-      visible:
-        true,
+  {
+    section_key:
+      "FAVORITE_SERIES",
 
-      position:
-        4,
-    },
+    visible:
+      true,
 
-    {
-      section_key:
-        "FAVORITE_GAMES",
+    position:
+      3,
+  },
 
-      visible:
-        true,
+  {
+    section_key:
+      "FAVORITE_BOOKS",
 
-      position:
-        5,
-    },
-  ];
+    visible:
+      true,
+
+    position:
+      4,
+  },
+
+  {
+    section_key:
+      "FAVORITE_GAMES",
+
+    visible:
+      true,
+
+    position:
+      5,
+  },
+];
 
 function getMediaHref(
   mediaType:
@@ -154,15 +188,54 @@ function getMediaHref(
   }
 }
 
+function getArtworkType(
+  mediaType:
+    MediaType
+): MediaArtworkType {
+  switch (
+    mediaType
+  ) {
+    case "MOVIE":
+      return "movie";
+
+    case "SERIES":
+      return "series";
+
+    case "BOOK":
+      return "book";
+
+    case "GAME":
+      return "game";
+  }
+}
+
+function getArtworkMap(
+  mediaType:
+    MediaType,
+
+  artworkMaps:
+    ArtworkMaps
+) {
+  return artworkMaps[
+    getArtworkType(
+      mediaType
+    )
+  ];
+}
+
 function FavoriteMedia({
   favorites,
   mediaType,
+  artworkMaps,
 }: {
   favorites:
     ProfileFavorite[];
 
   mediaType:
     MediaType;
+
+  artworkMaps:
+    ArtworkMaps;
 }) {
   const filtered =
     favorites
@@ -197,54 +270,94 @@ function FavoriteMedia({
     );
   }
 
+  const artworkMap =
+    getArtworkMap(
+      mediaType,
+      artworkMaps
+    );
+
   return (
     <div className="flex gap-3 overflow-x-auto pb-2 lg:gap-4">
       {filtered.map(
         (
           favorite
-        ) => (
-          <Link
-            key={
-              favorite.id
-            }
-            href={getMediaHref(
-              favorite.media_type,
+        ) => {
+          const override =
+            artworkMap.get(
               favorite.external_id
-            )}
-            className="group w-[112px] shrink-0 lg:w-[135px]"
-          >
-            <div className="aspect-[2/3] overflow-hidden rounded-md border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
-              {favorite.cover_url ? (
-                <Image
-                  src={
-                    favorite.cover_url
-                  }
-                  alt={
-                    favorite.title
-                  }
-                  width={500}
-                  height={750}
-                  unoptimized={
-                    shouldUseOriginalImage(
-                      favorite.cover_url
-                    )
-                  }
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center px-3 text-center text-xs text-zinc-600">
-                  Sin portada
-                </div>
-              )}
-            </div>
+            );
 
-            <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-zinc-500 transition group-hover:text-zinc-300 lg:text-sm">
-              {
-                favorite.title
+          const coverUrl =
+            override
+              ?.poster_url ??
+            favorite.cover_url;
+
+          const positionX =
+            override
+              ?.poster_position_x ??
+            50;
+
+          const positionY =
+            override
+              ?.poster_position_y ??
+            50;
+
+          const zoom =
+            override
+              ?.poster_zoom ??
+            1;
+
+          return (
+            <Link
+              key={
+                favorite.id
               }
-            </p>
-          </Link>
-        )
+              href={getMediaHref(
+                favorite.media_type,
+                favorite.external_id
+              )}
+              className="group w-[112px] shrink-0 lg:w-[135px]"
+            >
+              <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
+                {coverUrl ? (
+                  <Image
+                    src={
+                      coverUrl
+                    }
+                    alt={
+                      favorite.title
+                    }
+                    fill
+                    sizes="135px"
+                    unoptimized={
+                      shouldUseOriginalImage(
+                        coverUrl
+                      )
+                    }
+                    className="object-cover"
+                    style={{
+                      objectPosition:
+                        `${positionX}% ${positionY}%`,
+
+                      transform:
+                        `scale(${zoom})`,
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-3 text-center text-xs text-zinc-600">
+                    Sin portada
+                  </div>
+                )}
+              </div>
+
+              <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-zinc-500 transition group-hover:text-zinc-300 lg:text-sm">
+                {
+                  favorite.title
+                }
+              </p>
+            </Link>
+          );
+        }
       )}
     </div>
   );
@@ -267,13 +380,133 @@ function SectionTitle({
   );
 }
 
-export default function ProfileSections({
+export default async function ProfileSections({
   profileUserId,
   username,
   sections,
   favorites,
-  includeActivity = true,
+  includeActivity =
+    true,
 }: ProfileSectionsProps) {
+  /*
+   * Agrupamos los IDs por tipo para no pedir
+   * overrides que no necesitamos.
+   */
+
+  const movieIds =
+    favorites
+      .filter(
+        (
+          favorite
+        ) =>
+          favorite.media_type ===
+          "MOVIE"
+      )
+      .map(
+        (
+          favorite
+        ) =>
+          favorite.external_id
+      );
+
+  const seriesIds =
+    favorites
+      .filter(
+        (
+          favorite
+        ) =>
+          favorite.media_type ===
+          "SERIES"
+      )
+      .map(
+        (
+          favorite
+        ) =>
+          favorite.external_id
+      );
+
+  const bookIds =
+    favorites
+      .filter(
+        (
+          favorite
+        ) =>
+          favorite.media_type ===
+          "BOOK"
+      )
+      .map(
+        (
+          favorite
+        ) =>
+          favorite.external_id
+      );
+
+  const gameIds =
+    favorites
+      .filter(
+        (
+          favorite
+        ) =>
+          favorite.media_type ===
+          "GAME"
+      )
+      .map(
+        (
+          favorite
+        ) =>
+          favorite.external_id
+      );
+
+  /*
+   * Cargamos los cuatro grupos en paralelo.
+   *
+   * Si no existe override para un favorito,
+   * seguirá usando cover_url como siempre.
+   */
+
+  const [
+    movieArtwork,
+    seriesArtwork,
+    bookArtwork,
+    gameArtwork,
+  ] =
+    await Promise.all([
+      getMediaArtworkOverrides(
+        "movie",
+        movieIds
+      ),
+
+      getMediaArtworkOverrides(
+        "series",
+        seriesIds
+      ),
+
+      getMediaArtworkOverrides(
+        "book",
+        bookIds
+      ),
+
+      getMediaArtworkOverrides(
+        "game",
+        gameIds
+      ),
+    ]);
+
+  const artworkMaps:
+    ArtworkMaps = {
+    movie:
+      movieArtwork,
+
+    series:
+      seriesArtwork,
+
+    book:
+      bookArtwork,
+
+    game:
+      gameArtwork,
+  };
+
   const effectiveSections =
     sections.length >
     0
@@ -350,6 +583,9 @@ export default function ProfileSections({
                       favorites
                     }
                     mediaType="MOVIE"
+                    artworkMaps={
+                      artworkMaps
+                    }
                   />
                 </section>
               );
@@ -370,6 +606,9 @@ export default function ProfileSections({
                       favorites
                     }
                     mediaType="SERIES"
+                    artworkMaps={
+                      artworkMaps
+                    }
                   />
                 </section>
               );
@@ -390,6 +629,9 @@ export default function ProfileSections({
                       favorites
                     }
                     mediaType="BOOK"
+                    artworkMaps={
+                      artworkMaps
+                    }
                   />
                 </section>
               );
@@ -410,6 +652,9 @@ export default function ProfileSections({
                       favorites
                     }
                     mediaType="GAME"
+                    artworkMaps={
+                      artworkMaps
+                    }
                   />
                 </section>
               );
