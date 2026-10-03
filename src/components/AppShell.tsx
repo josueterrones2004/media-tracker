@@ -5,11 +5,11 @@ import Link from "next/link";
 
 import {
   ChevronDown,
+  ImageIcon,
   LogOut,
   Menu,
   ShieldCheck,
   UserRound,
-  ImageIcon,
   X,
 } from "lucide-react";
 
@@ -456,12 +456,14 @@ export default function AppShell({
                             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
                           >
                             <ShieldCheck
-                              size={17}
+                              size={
+                                17
+                              }
                             />
 
                             Reportes
                           </Link>
-                          
+
                           <Link
                             href="/admin/media"
                             onClick={() =>
@@ -472,10 +474,12 @@ export default function AppShell({
                             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
                           >
                             <ImageIcon
-                              size={17}
+                              size={
+                                17
+                              }
                             />
 
-                            Media artwork
+                            Editar portadas
                           </Link>
                         </>
                       )}
@@ -735,17 +739,61 @@ export default function AppShell({
 
                 {profile?.special_role ===
                   "OWNER" && (
-                  <Link
-                    href="/admin/reports"
-                    onClick={() =>
-                      setMobileMenuOpen(
-                        false
-                      )
-                    }
-                    className="block rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-100"
-                  >
-                    Reportes
-                  </Link>
+                  <>
+                    <div className="my-2 border-t border-zinc-800" />
+
+                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
+                      Administración
+                    </p>
+
+                    <Link
+                      href="/admin/reports"
+                      onClick={() =>
+                        setMobileMenuOpen(
+                          false
+                        )
+                      }
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                        pathname.startsWith(
+                          "/admin/reports"
+                        )
+                          ? "bg-fuchsia-500/10 text-fuchsia-300"
+                          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                      }`}
+                    >
+                      <ShieldCheck
+                        size={
+                          17
+                        }
+                      />
+
+                      Reportes
+                    </Link>
+
+                    <Link
+                      href="/admin/media"
+                      onClick={() =>
+                        setMobileMenuOpen(
+                          false
+                        )
+                      }
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                        pathname.startsWith(
+                          "/admin/media"
+                        )
+                          ? "bg-fuchsia-500/10 text-fuchsia-300"
+                          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                      }`}
+                    >
+                      <ImageIcon
+                        size={
+                          17
+                        }
+                      />
+
+                      Editar portadas
+                    </Link>
+                  </>
                 )}
               </nav>
 
@@ -783,7 +831,9 @@ export default function AppShell({
             : "min-w-0 p-4 sm:p-6 lg:p-8"
         }
       >
-        {children}
+        {
+          children
+        }
       </main>
 
       <BugReportButton />

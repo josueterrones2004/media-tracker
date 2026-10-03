@@ -269,11 +269,6 @@ export default async function SeriesPage() {
       []
     ) as EpisodeWatchRow[];
 
-  /*
-   * Cargamos overrides tanto para biblioteca
-   * como para reviews.
-   */
-
   const overrides =
     await getMediaArtworkOverrides(
       "series",
@@ -311,6 +306,21 @@ export default async function SeriesPage() {
             override
               ?.poster_url ??
             review.cover_url,
+
+          cover_position_x:
+            override
+              ?.poster_position_x ??
+            50,
+
+          cover_position_y:
+            override
+              ?.poster_position_y ??
+            50,
+
+          cover_zoom:
+            override
+              ?.poster_zoom ??
+            1,
         };
       }
     );

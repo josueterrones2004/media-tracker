@@ -14,8 +14,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
-  useEffect,
+  type TouchEvent,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -28,60 +29,9 @@ import type {
   DiscoverKind,
 } from "@/lib/discover";
 
-type Filter =
-  | "all"
-  | DiscoverKind;
+const AUTOPLAY_MS = 7000;
 
-const filters: {
-  value:
-    Filter;
-
-  label:
-    string;
-}[] = [
-  {
-    value:
-      "all",
-
-    label:
-      "Todo",
-  },
-
-  {
-    value:
-      "movie",
-
-    label:
-      "Películas",
-  },
-
-  {
-    value:
-      "series",
-
-    label:
-      "Series",
-  },
-
-  {
-    value:
-      "game",
-
-    label:
-      "Juegos",
-  },
-
-  {
-    value:
-      "book",
-
-    label:
-      "Libros",
-  },
-];
-
-const mixedOrder:
-  DiscoverKind[] = [
+const mixedOrder: DiscoverKind[] = [
   "movie",
   "game",
   "series",
@@ -89,27 +39,17 @@ const mixedOrder:
 ];
 
 function getKindLabel(
-  kind:
-    DiscoverKind
+  kind: DiscoverKind
 ) {
-  if (
-    kind ===
-    "movie"
-  ) {
+  if (kind === "movie") {
     return "Película";
   }
 
-  if (
-    kind ===
-    "series"
-  ) {
+  if (kind === "series") {
     return "Serie";
   }
 
-  if (
-    kind ===
-    "game"
-  ) {
+  if (kind === "game") {
     return "Juego";
   }
 
@@ -119,59 +59,34 @@ function getKindLabel(
 function KindIcon({
   kind,
 }: {
-  kind:
-    DiscoverKind;
+  kind: DiscoverKind;
 }) {
-  if (
-    kind ===
-    "movie"
-  ) {
+  if (kind === "movie") {
     return (
-      <Film
-        size={12}
-      />
+      <Film size={11} />
     );
   }
 
-  if (
-    kind ===
-    "series"
-  ) {
+  if (kind === "series") {
     return (
-      <Tv
-        size={12}
-      />
+      <Tv size={11} />
     );
   }
 
-  if (
-    kind ===
-    "game"
-  ) {
+  if (kind === "game") {
     return (
-      <Gamepad2
-        size={12}
-      />
+      <Gamepad2 size={11} />
     );
   }
 
   return (
-    <BookOpen
-      size={12}
-    />
+    <BookOpen size={11} />
   );
 }
 
-/*
- * MIX ITEMS
- */
-
 function interleaveItems(
-  items:
-    DiscoverItem[],
-
-  maximum =
-    24
+  items: DiscoverItem[],
+  maximum = 24
 ) {
   const groups =
     new Map<
@@ -186,28 +101,22 @@ function interleaveItems(
     groups.set(
       kind,
       items.filter(
-        (
-          item
-        ) =>
-          item.kind ===
-          kind
+        (item) =>
+          item.kind === kind
       )
     );
   }
 
   const result:
-    DiscoverItem[] =
-    [];
+    DiscoverItem[] = [];
 
-  let index =
-    0;
+  let index = 0;
 
   while (
     result.length <
     maximum
   ) {
-    let added =
-      false;
+    let added = false;
 
     for (
       const kind of
@@ -216,9 +125,7 @@ function interleaveItems(
       const item =
         groups.get(
           kind
-        )?.[
-          index
-        ];
+        )?.[index];
 
       if (!item) {
         continue;
@@ -228,8 +135,7 @@ function interleaveItems(
         item
       );
 
-      added =
-        true;
+      added = true;
 
       if (
         result.length >=
@@ -243,46 +149,36 @@ function interleaveItems(
       break;
     }
 
-    index +=
-      1;
+    index += 1;
   }
 
   return result;
 }
 
-/*
- * HERO
- */
-
 function getHeroSlides(
-  items:
-    DiscoverItem[]
+  items: DiscoverItem[]
 ) {
   const now =
     Date.now();
 
   const GAME_PAST_WINDOW =
-    183 *
+    30 *
     24 *
     60 *
     60 *
     1000;
 
-  /*
-   * JUEGOS:
-   *
-   * - deben venir de recent releases
-   * - ya deben haber sido publicados
-   * - máximo 6 meses
-   * - necesitan backdrop
-   */
+  const GAME_FUTURE_WINDOW =
+    7 *
+    24 *
+    60 *
+    60 *
+    1000;
 
   const games =
     items
       .filter(
-        (
-          item
-        ) => {
+        (item) => {
           if (
             item.kind !==
             "game"
@@ -308,7 +204,8 @@ function getHeroSlides(
               now -
                 GAME_PAST_WINDOW &&
             item.releaseTimestamp <=
-              now
+              now +
+                GAME_FUTURE_WINDOW
           );
         }
       )
@@ -316,28 +213,47 @@ function getHeroSlides(
         (
           first,
           second
-        ) =>
-          Math.abs(
-            now -
-              (
-                first.releaseTimestamp ??
-                0
-              )
-          ) -
-          Math.abs(
-            now -
-              (
-                second.releaseTimestamp ??
-                0
-              )
-          )
+        ) => {
+          const firstRelease =
+            first.releaseTimestamp ??
+            0;
+
+          const secondRelease =
+            second.releaseTimestamp ??
+            0;
+
+          const firstDistance =
+            Math.abs(
+              firstRelease -
+                now
+            );
+
+          const secondDistance =
+            Math.abs(
+              secondRelease -
+                now
+            );
+
+          if (
+            firstDistance !==
+            secondDistance
+          ) {
+            return (
+              firstDistance -
+              secondDistance
+            );
+          }
+
+          return (
+            secondRelease -
+            firstRelease
+          );
+        }
       );
 
   const movies =
     items.filter(
-      (
-        item
-      ) =>
+      (item) =>
         item.kind ===
           "movie" &&
         Boolean(
@@ -347,9 +263,7 @@ function getHeroSlides(
 
   const series =
     items.filter(
-      (
-        item
-      ) =>
+      (item) =>
         item.kind ===
           "series" &&
         Boolean(
@@ -357,39 +271,29 @@ function getHeroSlides(
         )
     );
 
-  /*
-   * Intentamos mezclar medios.
-   */
-
   const groups:
     DiscoverItem[][] = [
-    movies,
-    games,
-    series,
-  ];
+      movies,
+      games,
+      series,
+    ];
 
   const slides:
-    DiscoverItem[] =
-    [];
+    DiscoverItem[] = [];
 
-  let index =
-    0;
+  let index = 0;
 
   while (
-    slides.length <
-    7
+    slides.length < 7
   ) {
-    let added =
-      false;
+    let added = false;
 
     for (
       const group of
       groups
     ) {
       const item =
-        group[
-          index
-        ];
+        group[index];
 
       if (!item) {
         continue;
@@ -399,8 +303,7 @@ function getHeroSlides(
         item
       );
 
-      added =
-        true;
+      added = true;
 
       if (
         slides.length >=
@@ -414,54 +317,47 @@ function getHeroSlides(
       break;
     }
 
-    index +=
-      1;
+    index += 1;
   }
 
   return slides;
 }
 
-/*
- * COMPONENT
- */
-
 export default function DiscoverSection({
   items,
 }: {
-  items:
-    DiscoverItem[];
+  items: DiscoverItem[];
 }) {
-  const [
-    filter,
-    setFilter,
-  ] =
-    useState<Filter>(
-      "all"
-    );
-
   const [
     activeSlide,
     setActiveSlide,
   ] =
-    useState(
-      0
-    );
+    useState(0);
 
   const [
     paused,
     setPaused,
   ] =
-    useState(
-      false
-    );
+    useState(false);
 
   const [
     restartToken,
     setRestartToken,
   ] =
-    useState(
-      0
-    );
+    useState(0);
+
+  const touchStartX =
+    useRef<
+      number | null
+    >(null);
+
+  const touchStartY =
+    useRef<
+      number | null
+    >(null);
+
+  const didSwipe =
+    useRef(false);
 
   const heroSlides =
     useMemo(
@@ -469,144 +365,59 @@ export default function DiscoverSection({
         getHeroSlides(
           items
         ),
-      [
-        items,
-      ]
+      [items]
     );
 
-  /*
-   * No necesitamos setState en un effect
-   * para corregir el índice.
-   */
-
   const safeActiveSlide =
-    heroSlides.length >
-    0
+    heroSlides.length > 0
       ? activeSlide %
         heroSlides.length
       : 0;
-
-  /*
-   * AUTOPLAY
-   */
-
-  useEffect(
-    () => {
-      if (
-        paused ||
-        heroSlides.length <=
-          1
-      ) {
-        return;
-      }
-
-      if (
-        window.matchMedia(
-          "(prefers-reduced-motion: reduce)"
-        ).matches
-      ) {
-        return;
-      }
-
-      const timer =
-        window.setInterval(
-          () => {
-            setActiveSlide(
-              (
-                current
-              ) =>
-                (
-                  current +
-                  1
-                ) %
-                heroSlides.length
-            );
-          },
-          7000
-        );
-
-      return () =>
-        window.clearInterval(
-          timer
-        );
-    },
-    [
-      paused,
-      heroSlides.length,
-      restartToken,
-    ]
-  );
-
-  /*
-   * No repetimos los títulos del hero
-   * inmediatamente en Tendencias.
-   */
 
   const heroKeys =
     useMemo(
       () =>
         new Set(
           heroSlides.map(
-            (
-              item
-            ) =>
+            (item) =>
               item.key
           )
         ),
-      [
-        heroSlides,
-      ]
+      [heroSlides]
     );
 
-  const filteredPool =
+  const discoverPool =
     useMemo(
-      () => {
-        const source =
-          filter ===
-          "all"
-            ? interleaveItems(
-                items,
-                48
-              )
-            : items.filter(
-                (
-                  item
-                ) =>
-                  item.kind ===
-                  filter
-              );
-
-        return source.filter(
-          (
-            item
-          ) =>
+      () =>
+        interleaveItems(
+          items,
+          48
+        ).filter(
+          (item) =>
             !heroKeys.has(
               item.key
             )
-        );
-      },
+        ),
       [
         items,
-        filter,
         heroKeys,
       ]
     );
 
   const trendingItems =
-    filteredPool.slice(
+    discoverPool.slice(
       0,
       12
     );
 
   const recommendedItems =
-    filteredPool.slice(
+    discoverPool.slice(
       12,
       24
     );
 
   function goToSlide(
-    index:
-      number
+    index: number
   ) {
     if (
       heroSlides.length ===
@@ -629,18 +440,109 @@ export default function DiscoverSection({
       normalized
     );
 
-    /*
-     * Reiniciamos el autoplay después
-     * de navegación manual.
-     */
-
     setRestartToken(
-      (
-        current
-      ) =>
-        current +
-        1
+      (current) =>
+        current + 1
     );
+  }
+
+  function handleTouchStart(
+    event:
+      TouchEvent<HTMLDivElement>
+  ) {
+    const touch =
+      event.touches[0];
+
+    if (!touch) {
+      return;
+    }
+
+    touchStartX.current =
+      touch.clientX;
+
+    touchStartY.current =
+      touch.clientY;
+
+    didSwipe.current =
+      false;
+
+    setPaused(true);
+  }
+
+  function handleTouchEnd(
+    event:
+      TouchEvent<HTMLDivElement>
+  ) {
+    const touch =
+      event.changedTouches[0];
+
+    if (
+      !touch ||
+      touchStartX.current ===
+        null ||
+      touchStartY.current ===
+        null
+    ) {
+      setPaused(false);
+
+      return;
+    }
+
+    const differenceX =
+      touch.clientX -
+      touchStartX.current;
+
+    const differenceY =
+      touch.clientY -
+      touchStartY.current;
+
+    touchStartX.current =
+      null;
+
+    touchStartY.current =
+      null;
+
+    setPaused(false);
+
+    if (
+      Math.abs(
+        differenceY
+      ) >
+      Math.abs(
+        differenceX
+      )
+    ) {
+      return;
+    }
+
+    const SWIPE_THRESHOLD =
+      45;
+
+    if (
+      Math.abs(
+        differenceX
+      ) <
+      SWIPE_THRESHOLD
+    ) {
+      return;
+    }
+
+    didSwipe.current =
+      true;
+
+    if (
+      differenceX < 0
+    ) {
+      goToSlide(
+        safeActiveSlide +
+          1
+      );
+    } else {
+      goToSlide(
+        safeActiveSlide -
+          1
+      );
+    }
   }
 
   if (
@@ -658,24 +560,24 @@ export default function DiscoverSection({
   return (
     <div className="min-w-0">
       {/* ======================================
-          ESTRENOS Y NOVEDADES
+          ESTRENOS
       ====================================== */}
 
       {currentHero && (
         <section className="min-w-0">
-          <div className="mb-4">
+          <div className="mb-3 sm:mb-4">
             <div className="flex items-center gap-2">
               <Sparkles
-                size={16}
+                size={15}
                 className="text-fuchsia-400"
               />
 
-              <h2 className="text-[15px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
+              <h2 className="text-[14px] font-semibold uppercase tracking-[0.17em] text-zinc-200 sm:text-[15px]">
                 Estrenos y novedades
               </h2>
             </div>
 
-            <p className="mt-1 text-sm text-zinc-600">
+            <p className="mt-1 text-[13px] text-zinc-500 sm:text-sm">
               Nuevos títulos para ver, jugar y descubrir
             </p>
           </div>
@@ -691,10 +593,14 @@ export default function DiscoverSection({
                 false
               )
             }
-            className="relative"
+            onTouchStart={
+              handleTouchStart
+            }
+            onTouchEnd={
+              handleTouchEnd
+            }
+            className="relative touch-pan-y"
           >
-            {/* FLYER */}
-
             <Link
               key={
                 currentHero.key
@@ -702,7 +608,19 @@ export default function DiscoverSection({
               href={
                 currentHero.href
               }
-              className="group relative block h-[350px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 sm:h-[410px] lg:h-[470px]"
+              onClick={(
+                event
+              ) => {
+                if (
+                  didSwipe.current
+                ) {
+                  event.preventDefault();
+
+                  didSwipe.current =
+                    false;
+                }
+              }}
+              className="group relative block h-[240px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 sm:h-[340px] lg:h-[400px]"
             >
               {currentHero.backdrop ? (
                 <Image
@@ -714,26 +632,20 @@ export default function DiscoverSection({
                   }
                   fill
                   priority
+                  draggable={
+                    false
+                  }
                   sizes="100vw"
                   unoptimized={
                     shouldUseOriginalImage(
                       currentHero.backdrop
                     )
                   }
-                  className="object-cover transition duration-700 group-hover:scale-[1.01]"
+                  className="pointer-events-none select-none object-cover"
                   style={{
                     objectPosition:
                       `${currentHero.backdropPositionX}% ${currentHero.backdropPositionY}%`,
 
-                    /*
-                     * Aquí se aplica el zoom
-                     * guardado desde /admin/media.
-                     *
-                     * El pequeño hover se realiza
-                     * vía clase únicamente cuando
-                     * no hay un transform inline,
-                     * así que usamos scale aquí.
-                     */
                     transform:
                       `scale(${currentHero.backdropZoom})`,
                   }}
@@ -742,62 +654,84 @@ export default function DiscoverSection({
                 <div className="absolute inset-0 bg-zinc-900" />
               )}
 
-              {/*
-                Solo dejamos degradado izquierdo
-                e inferior.
+              {/* MOBILE */}
 
-                La derecha queda limpia para
-                conservar el color del artwork.
-              */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/42 via-black/10 to-transparent sm:hidden" />
 
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-zinc-950/90 via-zinc-950/30 to-transparent" />
+              {/* DESKTOP */}
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[52%] bg-gradient-to-r from-black/38 via-black/12 to-transparent sm:block" />
 
-              {/* INFO */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-[38%] bg-gradient-to-t from-black/30 via-transparent to-transparent sm:block" />
 
-              <div className="absolute inset-x-0 bottom-0 z-10 px-16 pb-7 pt-8 sm:px-20 sm:pb-9 lg:px-24 lg:pb-10">
-                <div className="max-w-[760px]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-zinc-300 backdrop-blur">
-                      <KindIcon
-                        kind={
-                          currentHero.kind
-                        }
-                      />
+              {/* MOBILE INFO */}
 
-                      {getKindLabel(
-                        currentHero.kind
-                      )}
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:hidden">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <MediaBadge
+                    kind={
+                      currentHero.kind
+                    }
+                  />
+
+                  {currentHero.year && (
+                    <span className="rounded-full border border-white/20 bg-black/20 px-2 py-1 text-[9px] text-white backdrop-blur-sm">
+                      {
+                        currentHero.year
+                      }
                     </span>
+                  )}
+
+                  <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 px-2 py-1 text-[9px] font-medium text-fuchsia-100 backdrop-blur-sm">
+                    Novedad
+                  </span>
+                </div>
+
+                <h3 className="mt-2 line-clamp-2 max-w-[94%] text-[21px] font-bold leading-[1.07] tracking-tight text-white drop-shadow-md">
+                  {
+                    currentHero.title
+                  }
+                </h3>
+              </div>
+
+              {/* DESKTOP INFO */}
+
+              <div className="absolute inset-x-0 bottom-0 z-10 hidden pb-8 pl-[88px] pr-[88px] sm:block lg:pb-10 lg:pl-[100px] lg:pr-[100px]">
+                <div className="max-w-[720px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <MediaBadge
+                      kind={
+                        currentHero.kind
+                      }
+                    />
 
                     {currentHero.year && (
-                      <span className="rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[11px] text-zinc-400 backdrop-blur">
+                      <span className="rounded-full border border-white/20 bg-black/20 px-2.5 py-1 text-[11px] text-white backdrop-blur-sm">
                         {
                           currentHero.year
                         }
                       </span>
                     )}
 
-                    <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-2.5 py-1 text-[11px] font-medium text-fuchsia-300 backdrop-blur">
+                    <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 px-2.5 py-1 text-[11px] font-medium text-fuchsia-100 backdrop-blur-sm">
                       Novedad
                     </span>
                   </div>
 
-                  <h3 className="mt-3 line-clamp-2 max-w-[700px] text-3xl font-bold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  <h3 className="mt-3 line-clamp-2 max-w-[680px] text-3xl font-bold leading-[1.05] tracking-tight text-white drop-shadow-md lg:text-[42px]">
                     {
                       currentHero.title
                     }
                   </h3>
 
                   {currentHero.description ? (
-                    <p className="mt-3 line-clamp-2 max-w-[720px] text-sm leading-6 text-zinc-300 sm:text-base sm:leading-7">
+                    <p className="mt-3 line-clamp-2 max-w-[650px] text-sm leading-6 text-white/90 drop-shadow-sm lg:text-[15px]">
                       {
                         currentHero.description
                       }
                     </p>
                   ) : currentHero.meta ? (
-                    <p className="mt-3 max-w-[720px] truncate text-sm text-zinc-400 sm:text-base">
+                    <p className="mt-3 truncate text-sm text-white/85">
                       {
                         currentHero.meta
                       }
@@ -807,7 +741,7 @@ export default function DiscoverSection({
               </div>
             </Link>
 
-            {/* ARROWS */}
+            {/* DESKTOP ARROWS */}
 
             {heroSlides.length >
               1 && (
@@ -820,11 +754,11 @@ export default function DiscoverSection({
                         1
                     )
                   }
-                  className="absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white shadow-lg shadow-black/30 backdrop-blur-md transition hover:scale-105 hover:bg-black/80 sm:left-4 sm:h-11 sm:w-11 lg:left-5"
+                  className="absolute left-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl border border-white/20 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40 sm:flex lg:left-5"
                   aria-label="Estreno anterior"
                 >
                   <ArrowLeft
-                    size={19}
+                    size={18}
                   />
                 </button>
 
@@ -836,22 +770,24 @@ export default function DiscoverSection({
                         1
                     )
                   }
-                  className="absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white shadow-lg shadow-black/30 backdrop-blur-md transition hover:scale-105 hover:bg-black/80 sm:right-4 sm:h-11 sm:w-11 lg:right-5"
+                  className="absolute right-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl border border-white/20 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40 sm:flex lg:right-5"
                   aria-label="Siguiente estreno"
                 >
                   <ArrowRight
-                    size={19}
+                    size={18}
                   />
                 </button>
               </>
             )}
           </div>
 
-          {/* DOTS */}
+          {/* ======================================
+              PROGRESO
+          ====================================== */}
 
           {heroSlides.length >
             1 && (
-            <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="mt-3 flex items-center justify-center gap-1.5">
               {heroSlides.map(
                 (
                   item,
@@ -878,12 +814,34 @@ export default function DiscoverSection({
                           ? "true"
                           : undefined
                       }
-                      className={`h-2 rounded-full transition-all ${
+                      className={`relative h-1.5 overflow-hidden rounded-full transition-all ${
                         active
-                          ? "w-6 bg-fuchsia-400"
-                          : "w-2 bg-zinc-700 hover:bg-zinc-500"
+                          ? "w-7 bg-zinc-600"
+                          : "w-1.5 bg-zinc-600 hover:bg-zinc-400"
                       }`}
-                    />
+                    >
+                      {active && (
+                        <span
+                          key={`${item.key}-${restartToken}`}
+                          onAnimationEnd={() =>
+                            goToSlide(
+                              safeActiveSlide +
+                                1
+                            )
+                          }
+                          className="absolute inset-y-0 left-0 rounded-full bg-fuchsia-400"
+                          style={{
+                            animation:
+                              `heroProgress ${AUTOPLAY_MS}ms linear forwards`,
+
+                            animationPlayState:
+                              paused
+                                ? "paused"
+                                : "running",
+                          }}
+                        />
+                      )}
+                    </button>
                   );
                 }
               )}
@@ -896,80 +854,21 @@ export default function DiscoverSection({
           TENDENCIAS
       ====================================== */}
 
-      <section className="mt-12 min-w-0">
-        <div className="mb-4 border-b border-zinc-800 pb-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-[15px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
-                Tendencias
-              </h2>
+      {trendingItems.length >
+        0 && (
+        <section className="mt-10 min-w-0 sm:mt-12">
+          <DiscoverSectionHeader
+            title="Tendencias"
+            subtitle="Lo que está destacando ahora"
+          />
 
-              <p className="mt-1 text-sm text-zinc-600">
-                Lo que está destacando ahora
-              </p>
-            </div>
-
-            <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-              {filters.map(
-                (
-                  option
-                ) => {
-                  const active =
-                    filter ===
-                    option.value;
-
-                  return (
-                    <button
-                      key={
-                        option.value
-                      }
-                      type="button"
-                      onClick={() =>
-                        setFilter(
-                          option.value
-                        )
-                      }
-                      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
-                        active
-                          ? "bg-fuchsia-500/15 text-fuchsia-300"
-                          : "text-zinc-600 hover:bg-zinc-900 hover:text-zinc-300"
-                      }`}
-                    >
-                      {
-                        option.label
-                      }
-                    </button>
-                  );
-                }
-              )}
-            </div>
-          </div>
-        </div>
-
-        {trendingItems.length >
-          0 ? (
-          <div className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-4">
-            {trendingItems.map(
-              (
-                item
-              ) => (
-                <PosterItem
-                  key={
-                    item.key
-                  }
-                  item={
-                    item
-                  }
-                />
-              )
-            )}
-          </div>
-        ) : (
-          <p className="py-8 text-sm text-zinc-700">
-            No hay resultados para este filtro.
-          </p>
-        )}
-      </section>
+          <MediaRail
+            items={
+              trendingItems
+            }
+          />
+        </section>
+      )}
 
       {/* ======================================
           RECOMENDACIONES
@@ -977,52 +876,93 @@ export default function DiscoverSection({
 
       {recommendedItems.length >
         0 && (
-        <section className="mt-12 min-w-0">
-          <div className="mb-4 border-b border-zinc-800 pb-3">
-            <h2 className="text-[15px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
-              Recomendaciones
-            </h2>
+        <section className="mt-10 min-w-0 sm:mt-12">
+          <DiscoverSectionHeader
+            title="Recomendaciones"
+            subtitle="Más títulos que podrían interesarte"
+          />
 
-            <p className="mt-1 text-sm text-zinc-600">
-              Más títulos que podrían interesarte
-            </p>
-          </div>
-
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-4 lg:overflow-visible lg:px-0">
-            {recommendedItems.map(
-              (
-                item
-              ) => (
-                <div
-                  key={
-                    item.key
-                  }
-                  className="w-[135px] shrink-0 sm:w-[150px] lg:w-auto"
-                >
-                  <PosterItem
-                    item={
-                      item
-                    }
-                  />
-                </div>
-              )
-            )}
-          </div>
+          <MediaRail
+            items={
+              recommendedItems
+            }
+          />
         </section>
+      )}
+
+      {/*
+        IMPORTANTE:
+        style normal, NO style jsx.
+        Así styled-jsx no añade clases jsx-xxxx
+        al HTML renderizado.
+      */}
+
+      <style>{`
+        @keyframes heroProgress {
+          from {
+            width: 0%;
+          }
+
+          to {
+            width: 100%;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function DiscoverSectionHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="mb-4 border-b border-zinc-900 pb-3">
+      <h2 className="text-[14px] font-semibold uppercase tracking-[0.17em] text-zinc-200 sm:text-[15px]">
+        {title}
+      </h2>
+
+      <p className="mt-1 text-[13px] text-zinc-500 sm:text-sm">
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+function MediaRail({
+  items,
+}: {
+  items: DiscoverItem[];
+}) {
+  return (
+    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:px-0">
+      {items.map(
+        (item) => (
+          <div
+            key={
+              item.key
+            }
+            className="w-[128px] shrink-0 snap-start sm:w-[145px] lg:w-[158px] xl:w-[166px]"
+          >
+            <MediaCard
+              item={
+                item
+              }
+            />
+          </div>
+        )
       )}
     </div>
   );
 }
 
-/*
- * POSTER CARD
- */
-
-function PosterItem({
+function MediaCard({
   item,
 }: {
-  item:
-    DiscoverItem;
+  item: DiscoverItem;
 }) {
   return (
     <Link
@@ -1031,72 +971,91 @@ function PosterItem({
       }
       className="group block min-w-0"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
-        {item.image ? (
-          <Image
-            src={
-              item.image
-            }
-            alt={
-              item.title
-            }
-            fill
-            sizes="180px"
-            unoptimized={
-              shouldUseOriginalImage(
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 p-1 transition duration-200 hover:border-white/20">
+        <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-900">
+          {item.image ? (
+            <Image
+              src={
                 item.image
-              )
-            }
-            className="object-cover transition duration-300"
-            style={{
-              objectPosition:
-                `${item.imagePositionX}% ${item.imagePositionY}%`,
+              }
+              alt={
+                item.title
+              }
+              fill
+              sizes="170px"
+              unoptimized={
+                shouldUseOriginalImage(
+                  item.image
+                )
+              }
+              className="object-cover transition duration-300 group-hover:brightness-110"
+              style={{
+                objectPosition:
+                  `${item.imagePositionX}% ${item.imagePositionY}%`,
 
-              transform:
-                `scale(${item.imageZoom})`,
-            }}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center px-2 text-center text-xs text-zinc-700">
-            Sin imagen
-          </div>
-        )}
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[35%] bg-gradient-to-t from-black/80 to-transparent" />
-
-        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-1 text-[9px] font-medium text-zinc-300 backdrop-blur">
-          <KindIcon
-            kind={
-              item.kind
-            }
-          />
-
-          {getKindLabel(
-            item.kind
+                transform:
+                  `scale(${item.imageZoom})`,
+              }}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-2 text-center text-xs text-zinc-700">
+              Sin imagen
+            </div>
           )}
-        </span>
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+
+          <div className="absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px] font-medium text-zinc-100 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1">
+              <KindIcon
+                kind={
+                  item.kind
+                }
+              />
+
+              {getKindLabel(
+                item.kind
+              )}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <h3 className="mt-2 line-clamp-2 min-h-9 text-xs font-medium leading-[18px] text-zinc-400 transition group-hover:text-white sm:text-[13px]">
+      <h3 className="mt-2 line-clamp-2 min-h-9 text-[12px] font-medium leading-[18px] text-zinc-200 transition group-hover:text-white sm:text-[13px]">
         {
           item.title
         }
       </h3>
 
-      <p className="mt-0.5 truncate text-[11px] text-zinc-700">
-        {item.year
-          ? `${item.year}${
-              item.kind ===
-                "book" &&
-              item.meta
-                ? ` · ${item.meta}`
-                : ""
-            }`
-          : item.meta ??
+      <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-zinc-500 sm:text-[11px]">
+        <span className="truncate">
+          {item.year ??
+            item.meta ??
             getKindLabel(
               item.kind
             )}
-      </p>
+        </span>
+      </div>
     </Link>
+  );
+}
+
+function MediaBadge({
+  kind,
+}: {
+  kind: DiscoverKind;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/20 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm sm:text-[11px]">
+      <KindIcon
+        kind={
+          kind
+        }
+      />
+
+      {getKindLabel(
+        kind
+      )}
+    </span>
   );
 }

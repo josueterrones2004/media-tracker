@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeft,
   ExternalLink,
   ImagePlus,
   Loader2,
@@ -14,8 +15,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
-  ChangeEvent,
-  FormEvent,
+  type ChangeEvent,
+  type FormEvent,
   useRef,
   useState,
 } from "react";
@@ -30,98 +31,53 @@ type MediaType =
   | "game"
   | "book";
 
-type SearchKind =
-  | "game"
-  | "movie"
-  | "series"
-  | "book";
-
 type SearchResult = {
-  key:
-    string;
-
-  title:
-    string;
-
-  kind:
-    SearchKind;
-
-  image:
-    | string
-    | null;
-
-  year:
-    | number
-    | null;
-
-  href:
-    string;
-
-  subtitle?:
-    string;
+  key: string;
+  title: string;
+  kind: MediaType;
+  image: string | null;
+  year: number | null;
+  href: string;
+  subtitle?: string;
 };
 
 type AssetOption = {
-  url:
-    string;
+  url: string;
 
   type:
     | "poster"
     | "backdrop";
 
-  label:
-    string;
-
-  width?:
-    number;
-
-  height?:
-    number;
+  label: string;
+  width?: number;
+  height?: number;
 };
 
 type ApiOverride = {
-  poster_url:
-    | string
-    | null;
+  poster_url: string | null;
+  backdrop_url: string | null;
 
-  backdrop_url:
-    | string
-    | null;
+  poster_position_x: number;
+  poster_position_y: number;
+  poster_zoom: number;
 
-  poster_position_x:
-    number;
-
-  poster_position_y:
-    number;
-
-  poster_zoom:
-    number;
-
-  backdrop_position_x:
-    number;
-
-  backdrop_position_y:
-    number;
-
-  backdrop_zoom:
-    number;
+  backdrop_position_x: number;
+  backdrop_position_y: number;
+  backdrop_zoom: number;
 };
 
 type AssetResponse = {
-  automaticPoster:
-    | string
-    | null;
+  automaticPoster: string | null;
+  automaticBackdrop: string | null;
 
-  automaticBackdrop:
-    | string
-    | null;
+  currentPoster?: string | null;
+  currentBackdrop?: string | null;
 
-  assets:
-    AssetOption[];
+  assets: AssetOption[];
 
   override:
-    ApiOverride |
-    null;
+    | ApiOverride
+    | null;
 };
 
 const MAX_FILE_SIZE =
@@ -136,16 +92,8 @@ const ACCEPTED_TYPES =
     "image/webp",
   ]);
 
-function getMediaType(
-  kind:
-    SearchResult["kind"]
-): MediaType {
-  return kind;
-}
-
 function getExternalId(
-  result:
-    SearchResult
+  result: SearchResult
 ) {
   return result.key
     .split(":")
@@ -154,8 +102,7 @@ function getExternalId(
 }
 
 function getExtension(
-  file:
-    File
+  file: File
 ) {
   if (
     file.type ===
@@ -172,6 +119,33 @@ function getExtension(
   }
 
   return "jpg";
+}
+
+function getKindLabel(
+  kind: MediaType
+) {
+  if (
+    kind ===
+    "movie"
+  ) {
+    return "Película";
+  }
+
+  if (
+    kind ===
+    "series"
+  ) {
+    return "Serie";
+  }
+
+  if (
+    kind ===
+    "game"
+  ) {
+    return "Juego";
+  }
+
+  return "Libro";
 }
 
 export default function MediaAdminClient() {
@@ -197,13 +171,17 @@ export default function MediaAdminClient() {
     query,
     setQuery,
   ] =
-    useState("");
+    useState(
+      ""
+    );
 
   const [
     searching,
     setSearching,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     results,
@@ -211,7 +189,9 @@ export default function MediaAdminClient() {
   ] =
     useState<
       SearchResult[]
-    >([]);
+    >(
+      []
+    );
 
   const [
     selected,
@@ -220,13 +200,17 @@ export default function MediaAdminClient() {
     useState<
       SearchResult |
       null
-    >(null);
+    >(
+      null
+    );
 
   const [
     loadingMedia,
     setLoadingMedia,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     assets,
@@ -234,7 +218,9 @@ export default function MediaAdminClient() {
   ] =
     useState<
       AssetOption[]
-    >([]);
+    >(
+      []
+    );
 
   const [
     automaticBackdrop,
@@ -243,7 +229,9 @@ export default function MediaAdminClient() {
     useState<
       string |
       null
-    >(null);
+    >(
+      null
+    );
 
   const [
     automaticPoster,
@@ -252,7 +240,9 @@ export default function MediaAdminClient() {
     useState<
       string |
       null
-    >(null);
+    >(
+      null
+    );
 
   const [
     backdropUrl,
@@ -261,7 +251,9 @@ export default function MediaAdminClient() {
     useState<
       string |
       null
-    >(null);
+    >(
+      null
+    );
 
   const [
     posterUrl,
@@ -270,65 +262,95 @@ export default function MediaAdminClient() {
     useState<
       string |
       null
-    >(null);
+    >(
+      null
+    );
 
   const [
     backdropPositionX,
     setBackdropPositionX,
   ] =
-    useState(50);
+    useState(
+      50
+    );
 
   const [
     backdropPositionY,
     setBackdropPositionY,
   ] =
-    useState(50);
+    useState(
+      50
+    );
 
   const [
     backdropZoom,
     setBackdropZoom,
   ] =
-    useState(1);
+    useState(
+      1
+    );
 
   const [
     posterPositionX,
     setPosterPositionX,
   ] =
-    useState(50);
+    useState(
+      50
+    );
 
   const [
     posterPositionY,
     setPosterPositionY,
   ] =
-    useState(50);
+    useState(
+      50
+    );
 
   const [
     posterZoom,
     setPosterZoom,
   ] =
-    useState(1);
+    useState(
+      1
+    );
 
   const [
     uploading,
     setUploading,
   ] =
     useState<
-      "backdrop" |
-      "poster" |
+      "backdrop"
+      | "poster"
+      | null
+    >(
       null
-    >(null);
+    );
 
   const [
     saving,
     setSaving,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     message,
     setMessage,
   ] =
-    useState("");
+    useState(
+      ""
+    );
+
+  /*
+   * La imagen visible es:
+   *
+   * override -> automática
+   *
+   * No usamos selected.image como fallback aquí,
+   * porque la búsqueda puede mostrar el override
+   * actual y confundirlo con la automática.
+   */
 
   const visibleBackdrop =
     backdropUrl ??
@@ -336,9 +358,12 @@ export default function MediaAdminClient() {
 
   const visiblePoster =
     posterUrl ??
-    automaticPoster ??
-    selected?.image ??
-    null;
+    automaticPoster;
+
+  /*
+   * Evitamos repetir la imagen automática
+   * dentro de las alternativas.
+   */
 
   const backdropAssets =
     assets.filter(
@@ -346,7 +371,9 @@ export default function MediaAdminClient() {
         asset
       ) =>
         asset.type ===
-        "backdrop"
+          "backdrop" &&
+        asset.url !==
+          automaticBackdrop
     );
 
   const posterAssets =
@@ -355,12 +382,17 @@ export default function MediaAdminClient() {
         asset
       ) =>
         asset.type ===
-        "poster"
+          "poster" &&
+        asset.url !==
+          automaticPoster
     );
 
+  /*
+   * SEARCH
+   */
+
   async function searchMedia(
-    event:
-      FormEvent
+    event: FormEvent
   ) {
     event.preventDefault();
 
@@ -400,19 +432,31 @@ export default function MediaAdminClient() {
           fetch(
             `/api/search-suggestions?q=${encodeURIComponent(
               clean
-            )}&source=games`
+            )}&source=games`,
+            {
+              cache:
+                "no-store",
+            }
           ),
 
           fetch(
             `/api/search-suggestions?q=${encodeURIComponent(
               clean
-            )}&source=screen`
+            )}&source=screen`,
+            {
+              cache:
+                "no-store",
+            }
           ),
 
           fetch(
             `/api/search-suggestions?q=${encodeURIComponent(
               clean
-            )}&source=books`
+            )}&source=books`,
+            {
+              cache:
+                "no-store",
+            }
           ),
         ]);
 
@@ -426,6 +470,11 @@ export default function MediaAdminClient() {
           screen.json(),
           books.json(),
         ]);
+
+      /*
+       * search-suggestions ya devuelve
+       * poster_url personalizado si existe.
+       */
 
       setResults([
         ...(
@@ -460,9 +509,12 @@ export default function MediaAdminClient() {
     }
   }
 
+  /*
+   * SELECT
+   */
+
   async function chooseResult(
-    result:
-      SearchResult
+    result: SearchResult
   ) {
     setSelected(
       result
@@ -522,9 +574,13 @@ export default function MediaAdminClient() {
 
       setAutomaticPoster(
         data.automaticPoster ??
-        result.image ??
         null
       );
+
+      /*
+       * Cargamos exactamente el override
+       * que actualmente utiliza la app.
+       */
 
       setBackdropUrl(
         data.override
@@ -593,7 +649,7 @@ export default function MediaAdminClient() {
       );
 
       setMessage(
-        "No se pudieron cargar los artworks."
+        "No se pudieron cargar las imágenes."
       );
     } finally {
       setLoadingMedia(
@@ -602,13 +658,16 @@ export default function MediaAdminClient() {
     }
   }
 
+  /*
+   * UPLOAD
+   */
+
   async function uploadImage(
-    file:
-      File,
+    file: File,
 
     type:
-      "backdrop" |
-      "poster"
+      | "backdrop"
+      | "poster"
   ) {
     if (
       !selected
@@ -652,18 +711,13 @@ export default function MediaAdminClient() {
         selected
       );
 
-    const mediaType =
-      getMediaType(
-        selected.kind
-      ).toLowerCase();
-
     const extension =
       getExtension(
         file
       );
 
     const path =
-      `${mediaType}/${externalId}/${type}-${Date.now()}.${extension}`;
+      `${selected.kind}/${externalId}/${type}-${Date.now()}.${extension}`;
 
     const {
       error,
@@ -764,8 +818,8 @@ export default function MediaAdminClient() {
       ChangeEvent<HTMLInputElement>,
 
     type:
-      "backdrop" |
-      "poster"
+      | "backdrop"
+      | "poster"
   ) {
     const file =
       event.target.files?.[0];
@@ -773,7 +827,9 @@ export default function MediaAdminClient() {
     event.target.value =
       "";
 
-    if (!file) {
+    if (
+      !file
+    ) {
       return;
     }
 
@@ -782,6 +838,10 @@ export default function MediaAdminClient() {
       type
     );
   }
+
+  /*
+   * SAVE
+   */
 
   async function saveOverride() {
     if (
@@ -798,11 +858,6 @@ export default function MediaAdminClient() {
       ""
     );
 
-    const mediaType =
-      getMediaType(
-        selected.kind
-      );
-
     const externalId =
       getExternalId(
         selected
@@ -818,7 +873,7 @@ export default function MediaAdminClient() {
         .upsert(
           {
             media_type:
-              mediaType,
+              selected.kind,
 
             external_id:
               externalId,
@@ -826,9 +881,6 @@ export default function MediaAdminClient() {
             title:
               selected.title,
 
-            /*
-             * null = usar la imagen automática.
-             */
             backdrop_url:
               backdropUrl,
 
@@ -881,6 +933,49 @@ export default function MediaAdminClient() {
       return;
     }
 
+    /*
+     * Actualizamos inmediatamente la miniatura
+     * del resultado actual.
+     */
+
+    const resolvedPoster =
+      posterUrl ??
+      automaticPoster;
+
+    setResults(
+      (
+        current
+      ) =>
+        current.map(
+          (
+            result
+          ) =>
+            result.key ===
+            selected.key
+              ? {
+                  ...result,
+
+                  image:
+                    resolvedPoster,
+                }
+              : result
+        )
+    );
+
+    setSelected(
+      (
+        current
+      ) =>
+        current
+          ? {
+              ...current,
+
+              image:
+                resolvedPoster,
+            }
+          : current
+    );
+
     setMessage(
       "Cambios guardados."
     );
@@ -889,6 +984,10 @@ export default function MediaAdminClient() {
       false
     );
   }
+
+  /*
+   * RESTORE
+   */
 
   async function restoreAutomatic() {
     if (
@@ -901,10 +1000,9 @@ export default function MediaAdminClient() {
       true
     );
 
-    const mediaType =
-      getMediaType(
-        selected.kind
-      );
+    setMessage(
+      ""
+    );
 
     const externalId =
       getExternalId(
@@ -921,7 +1019,7 @@ export default function MediaAdminClient() {
         .delete()
         .eq(
           "media_type",
-          mediaType
+          selected.kind
         )
         .eq(
           "external_id",
@@ -974,6 +1072,40 @@ export default function MediaAdminClient() {
       1
     );
 
+    setResults(
+      (
+        current
+      ) =>
+        current.map(
+          (
+            result
+          ) =>
+            result.key ===
+            selected.key
+              ? {
+                  ...result,
+
+                  image:
+                    automaticPoster,
+                }
+              : result
+        )
+    );
+
+    setSelected(
+      (
+        current
+      ) =>
+        current
+          ? {
+              ...current,
+
+              image:
+                automaticPoster,
+            }
+          : current
+    );
+
     setMessage(
       "Imagen automática restaurada."
     );
@@ -984,10 +1116,18 @@ export default function MediaAdminClient() {
   }
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
-      {/* SEARCH */}
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-8">
+      {/* ======================================
+          SEARCH
+      ====================================== */}
 
-      <aside>
+      <aside
+        className={`min-w-0 xl:sticky xl:top-[94px] xl:self-start ${
+          selected
+            ? "hidden xl:block"
+            : "block"
+        }`}
+      >
         <form
           onSubmit={
             searchMedia
@@ -995,7 +1135,9 @@ export default function MediaAdminClient() {
           className="relative"
         >
           <Search
-            size={17}
+            size={
+              17
+            }
             className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600"
           />
 
@@ -1011,14 +1153,16 @@ export default function MediaAdminClient() {
               )
             }
             placeholder="Buscar título..."
-            className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-10 pr-4 text-sm text-zinc-200 outline-none focus:border-fuchsia-500"
+            className="h-12 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-10 pr-4 text-sm text-zinc-200 outline-none transition focus:border-fuchsia-500"
           />
         </form>
 
         {searching && (
           <div className="mt-4 flex items-center gap-2 text-sm text-zinc-600">
             <Loader2
-              size={15}
+              size={
+                15
+              }
               className="animate-spin"
             />
 
@@ -1026,7 +1170,7 @@ export default function MediaAdminClient() {
           </div>
         )}
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-1.5">
           {results.map(
             (
               result
@@ -1041,15 +1185,15 @@ export default function MediaAdminClient() {
                     result
                   );
                 }}
-                className={`flex w-full gap-3 rounded-xl border p-2 text-left transition ${
+                className={`flex w-full min-w-0 gap-3 rounded-xl border p-2 text-left transition ${
                   selected?.key ===
                   result.key
-                    ? "border-fuchsia-500/30 bg-fuchsia-500/5"
+                    ? "border-fuchsia-500/40 bg-fuchsia-500/5"
                     : "border-transparent hover:border-zinc-800 hover:bg-zinc-900"
                 }`}
               >
-                <div className="relative h-[72px] w-12 shrink-0 overflow-hidden rounded-md bg-zinc-900">
-                  {result.image && (
+                <div className="relative h-[68px] w-[46px] shrink-0 overflow-hidden rounded-md bg-zinc-900">
+                  {result.image ? (
                     <Image
                       src={
                         result.image
@@ -1057,23 +1201,27 @@ export default function MediaAdminClient() {
                       alt=""
                       fill
                       unoptimized
-                      sizes="48px"
+                      sizes="46px"
                       className="object-cover"
                     />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[9px] text-zinc-700">
+                      —
+                    </div>
                   )}
                 </div>
 
                 <div className="min-w-0 py-1">
-                  <p className="line-clamp-2 text-sm font-medium text-zinc-200">
+                  <p className="line-clamp-2 text-sm font-medium leading-5 text-zinc-200">
                     {
                       result.title
                     }
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-600">
-                    {
+                    {getKindLabel(
                       result.kind
-                    }
+                    )}
 
                     {result.year
                       ? ` · ${result.year}`
@@ -1086,32 +1234,60 @@ export default function MediaAdminClient() {
         </div>
       </aside>
 
-      {/* EDITOR */}
+      {/* ======================================
+          EMPTY
+      ====================================== */}
 
       {!selected ? (
-        <div className="flex min-h-[500px] items-center justify-center rounded-2xl border border-dashed border-zinc-800 text-sm text-zinc-700">
+        <div className="hidden min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-zinc-800 px-6 text-center text-sm text-zinc-700 xl:flex">
           Busca y selecciona un título.
         </div>
       ) : loadingMedia ? (
-        <div className="flex min-h-[500px] items-center justify-center">
+        <div className="flex min-h-[300px] items-center justify-center sm:min-h-[500px]">
           <Loader2
-            size={26}
+            size={
+              26
+            }
             className="animate-spin text-fuchsia-400"
           />
         </div>
       ) : (
-        <section>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.15em] text-fuchsia-400">
-                {
-                  getMediaType(
-                    selected.kind
-                  )
-                }
+        <section className="min-w-0">
+          {/* ======================================
+              SELECTED HEADER
+          ====================================== */}
+
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected(
+                    null
+                  );
+
+                  setMessage(
+                    ""
+                  );
+                }}
+                className="mb-3 inline-flex items-center gap-2 text-xs text-zinc-500 transition hover:text-zinc-200 xl:hidden"
+              >
+                <ArrowLeft
+                  size={
+                    15
+                  }
+                />
+
+                Cambiar título
+              </button>
+
+              <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-fuchsia-400 sm:text-xs">
+                {getKindLabel(
+                  selected.kind
+                )}
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold text-zinc-100">
+              <h2 className="mt-1 line-clamp-2 text-xl font-bold leading-tight text-zinc-100 sm:text-2xl">
                 {
                   selected.title
                 }
@@ -1123,81 +1299,89 @@ export default function MediaAdminClient() {
                 selected.href
               }
               target="_blank"
-              className="flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-500 transition hover:text-white"
+              className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-zinc-800 px-2.5 text-xs text-zinc-500 transition hover:text-white sm:h-10 sm:px-3 sm:text-sm"
             >
               <ExternalLink
-                size={15}
+                size={
+                  14
+                }
               />
 
-              Abrir ficha
+              <span className="hidden sm:inline">
+                Abrir ficha
+              </span>
             </Link>
           </div>
 
-          {/* BACKDROP */}
+          {/* ======================================
+              BANNER
+          ====================================== */}
 
-          <div className="mt-7">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-zinc-200">
-                  Banner
-                </h3>
+          <div className="mt-7 sm:mt-8">
+            <div>
+              <h3 className="font-semibold text-zinc-200">
+                Banner
+              </h3>
 
-                <p className="mt-1 text-xs text-zinc-600">
-                  Ajusta exactamente cómo aparecerá en Media Tracker.
-                </p>
-              </div>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                Se muestra el banner que está usando actualmente Media Tracker.
+              </p>
+            </div>
 
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBackdropUrl(
-                      null
-                    );
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setBackdropUrl(
+                    null
+                  );
 
-                    setBackdropPositionX(
-                      50
-                    );
+                  setBackdropPositionX(
+                    50
+                  );
 
-                    setBackdropPositionY(
-                      50
-                    );
+                  setBackdropPositionY(
+                    50
+                  );
 
-                    setBackdropZoom(
-                      1
-                    );
-                  }}
-                  className="rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200"
-                >
-                  Usar automático
-                </button>
+                  setBackdropZoom(
+                    1
+                  );
+                }}
+                className="min-h-10 rounded-xl border border-zinc-800 px-3 py-2 text-xs font-medium text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200"
+              >
+                Usar automático
+              </button>
 
-                <button
-                  type="button"
-                  disabled={
-                    uploading ===
-                    "backdrop"
-                  }
-                  onClick={() =>
-                    bannerInputRef.current?.click()
-                  }
-                  className="flex items-center gap-2 rounded-lg bg-fuchsia-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
-                >
-                  {uploading ===
-                  "backdrop" ? (
-                    <Loader2
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Upload
-                      size={14}
-                    />
-                  )}
+              <button
+                type="button"
+                disabled={
+                  uploading ===
+                  "backdrop"
+                }
+                onClick={() =>
+                  bannerInputRef.current?.click()
+                }
+                className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-fuchsia-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
+              >
+                {uploading ===
+                "backdrop" ? (
+                  <Loader2
+                    size={
+                      14
+                    }
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Upload
+                    size={
+                      14
+                    }
+                  />
+                )}
 
-                  Subir desde PC
-                </button>
-              </div>
+                Subir imagen
+              </button>
             </div>
 
             <input
@@ -1217,7 +1401,7 @@ export default function MediaAdminClient() {
               }
             />
 
-            <div className="relative mt-4 aspect-[16/6] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+            <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 sm:aspect-[16/7] sm:rounded-2xl lg:aspect-[16/6]">
               {visibleBackdrop ? (
                 <Image
                   src={
@@ -1236,25 +1420,34 @@ export default function MediaAdminClient() {
                   }}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-700">
+                <div className="flex h-full items-center justify-center px-4 text-center text-xs text-zinc-700 sm:text-sm">
                   No hay banner disponible.
                 </div>
               )}
-
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-zinc-950/90 via-zinc-950/30 to-transparent" />
-
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
             </div>
 
-            <div className="mt-5 grid gap-6 rounded-2xl border border-zinc-800 bg-zinc-900/20 p-5 md:grid-cols-3">
+            <CurrentStatus
+              custom={
+                backdropUrl !==
+                null
+              }
+            />
+
+            <div className="mt-4 grid gap-5 rounded-xl border border-zinc-800 bg-zinc-900/20 p-4 sm:rounded-2xl sm:p-5 md:grid-cols-3">
               <RangeControl
                 label="Posición X"
                 value={
                   backdropPositionX
                 }
-                min={0}
-                max={100}
-                step={1}
+                min={
+                  0
+                }
+                max={
+                  100
+                }
+                step={
+                  1
+                }
                 suffix="%"
                 onChange={
                   setBackdropPositionX
@@ -1266,9 +1459,15 @@ export default function MediaAdminClient() {
                 value={
                   backdropPositionY
                 }
-                min={0}
-                max={100}
-                step={1}
+                min={
+                  0
+                }
+                max={
+                  100
+                }
+                step={
+                  1
+                }
                 suffix="%"
                 onChange={
                   setBackdropPositionY
@@ -1280,9 +1479,15 @@ export default function MediaAdminClient() {
                 value={
                   backdropZoom
                 }
-                min={1}
-                max={2}
-                step={0.01}
+                min={
+                  1
+                }
+                max={
+                  2
+                }
+                step={
+                  0.01
+                }
                 suffix="×"
                 onChange={
                   setBackdropZoom
@@ -1290,16 +1495,15 @@ export default function MediaAdminClient() {
               />
             </div>
 
-            {/* API ARTWORKS */}
-
-            {backdropAssets.length >
-              0 && (
-              <div className="mt-6">
-                <p className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-zinc-600">
+            {(automaticBackdrop ||
+              backdropAssets.length >
+                0) && (
+              <div className="mt-5 min-w-0">
+                <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600 sm:text-xs">
                   Imágenes disponibles
                 </p>
 
-                <div className="flex gap-3 overflow-x-auto pb-3">
+                <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
                   {automaticBackdrop && (
                     <ArtworkButton
                       url={
@@ -1353,17 +1557,22 @@ export default function MediaAdminClient() {
                             asset.url
                           );
 
-                          setBackdropPositionX(
-                            50
-                          );
+                          if (
+                            asset.label !==
+                            "Actual"
+                          ) {
+                            setBackdropPositionX(
+                              50
+                            );
 
-                          setBackdropPositionY(
-                            50
-                          );
+                            setBackdropPositionY(
+                              50
+                            );
 
-                          setBackdropZoom(
-                            1
-                          );
+                            setBackdropZoom(
+                              1
+                            );
+                          }
                         }}
                       />
                     )
@@ -1373,19 +1582,45 @@ export default function MediaAdminClient() {
             )}
           </div>
 
-          {/* POSTER */}
+          {/* ======================================
+              POSTER
+          ====================================== */}
 
-          <div className="mt-10 border-t border-zinc-800 pt-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-zinc-200">
-                  Portada
-                </h3>
+          <div className="mt-9 border-t border-zinc-800 pt-7 sm:mt-10 sm:pt-8">
+            <div>
+              <h3 className="font-semibold text-zinc-200">
+                Portada
+              </h3>
 
-                <p className="mt-1 text-xs text-zinc-600">
-                  Puedes usar la original o subir una propia.
-                </p>
-              </div>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                Se muestra la portada que está usando actualmente Media Tracker.
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setPosterUrl(
+                    null
+                  );
+
+                  setPosterPositionX(
+                    50
+                  );
+
+                  setPosterPositionY(
+                    50
+                  );
+
+                  setPosterZoom(
+                    1
+                  );
+                }}
+                className="min-h-10 rounded-xl border border-zinc-800 px-3 py-2 text-xs font-medium text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200"
+              >
+                Usar automática
+              </button>
 
               <button
                 type="button"
@@ -1396,21 +1631,25 @@ export default function MediaAdminClient() {
                 onClick={() =>
                   posterInputRef.current?.click()
                 }
-                className="flex items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-700 disabled:opacity-50"
+                className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-700 disabled:opacity-50"
               >
                 {uploading ===
                 "poster" ? (
                   <Loader2
-                    size={14}
+                    size={
+                      14
+                    }
                     className="animate-spin"
                   />
                 ) : (
                   <ImagePlus
-                    size={14}
+                    size={
+                      14
+                    }
                   />
                 )}
 
-                Subir desde PC
+                Subir imagen
               </button>
             </div>
 
@@ -1431,38 +1670,58 @@ export default function MediaAdminClient() {
               }
             />
 
-            <div className="mt-5 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-              <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-                {visiblePoster ? (
-                  <Image
-                    src={
-                      visiblePoster
-                    }
-                    alt=""
-                    fill
-                    unoptimized
-                    className="object-cover"
-                    style={{
-                      objectPosition:
-                        `${posterPositionX}% ${posterPositionY}%`,
+            <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6">
+              <div>
+                <div className="relative mx-auto aspect-[2/3] w-[min(62vw,210px)] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 sm:w-[210px] lg:mx-0 lg:w-[220px]">
+                  {visiblePoster ? (
+                    <Image
+                      src={
+                        visiblePoster
+                      }
+                      alt=""
+                      fill
+                      unoptimized
+                      className="object-cover"
+                      style={{
+                        objectPosition:
+                          `${posterPositionX}% ${posterPositionY}%`,
 
-                      transform:
-                        `scale(${posterZoom})`,
-                    }}
-                  />
-                ) : null}
+                        transform:
+                          `scale(${posterZoom})`,
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-zinc-700">
+                      Sin portada
+                    </div>
+                  )}
+                </div>
+
+                <CurrentStatus
+                  custom={
+                    posterUrl !==
+                    null
+                  }
+                  centered
+                />
               </div>
 
-              <div>
-                <div className="grid gap-6 rounded-2xl border border-zinc-800 bg-zinc-900/20 p-5 md:grid-cols-3">
+              <div className="min-w-0">
+                <div className="grid gap-5 rounded-xl border border-zinc-800 bg-zinc-900/20 p-4 sm:rounded-2xl sm:p-5 md:grid-cols-3">
                   <RangeControl
                     label="Posición X"
                     value={
                       posterPositionX
                     }
-                    min={0}
-                    max={100}
-                    step={1}
+                    min={
+                      0
+                    }
+                    max={
+                      100
+                    }
+                    step={
+                      1
+                    }
                     suffix="%"
                     onChange={
                       setPosterPositionX
@@ -1474,9 +1733,15 @@ export default function MediaAdminClient() {
                     value={
                       posterPositionY
                     }
-                    min={0}
-                    max={100}
-                    step={1}
+                    min={
+                      0
+                    }
+                    max={
+                      100
+                    }
+                    step={
+                      1
+                    }
                     suffix="%"
                     onChange={
                       setPosterPositionY
@@ -1488,9 +1753,15 @@ export default function MediaAdminClient() {
                     value={
                       posterZoom
                     }
-                    min={1}
-                    max={2}
-                    step={0.01}
+                    min={
+                      1
+                    }
+                    max={
+                      2
+                    }
+                    step={
+                      0.01
+                    }
                     suffix="×"
                     onChange={
                       setPosterZoom
@@ -1498,27 +1769,28 @@ export default function MediaAdminClient() {
                   />
                 </div>
 
-                {posterAssets.length >
-                  0 && (
-                  <div className="mt-5 flex gap-3 overflow-x-auto pb-3">
-                    {posterAssets.map(
-                      (
-                        asset
-                      ) => (
+                {(automaticPoster ||
+                  posterAssets.length >
+                    0) && (
+                  <div className="mt-5 min-w-0">
+                    <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600 sm:text-xs">
+                      Portadas disponibles
+                    </p>
+
+                    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+                      {automaticPoster && (
                         <PosterButton
-                          key={
-                            asset.url
-                          }
                           url={
-                            asset.url
+                            automaticPoster
                           }
+                          label="Automática"
                           active={
                             posterUrl ===
-                            asset.url
+                            null
                           }
                           onClick={() => {
                             setPosterUrl(
-                              asset.url
+                              null
                             );
 
                             setPosterPositionX(
@@ -1534,63 +1806,117 @@ export default function MediaAdminClient() {
                             );
                           }}
                         />
-                      )
-                    )}
+                      )}
+
+                      {posterAssets.map(
+                        (
+                          asset
+                        ) => (
+                          <PosterButton
+                            key={
+                              asset.url
+                            }
+                            url={
+                              asset.url
+                            }
+                            label={
+                              asset.label
+                            }
+                            active={
+                              posterUrl ===
+                              asset.url
+                            }
+                            onClick={() => {
+                              setPosterUrl(
+                                asset.url
+                              );
+
+                              if (
+                                asset.label !==
+                                "Actual"
+                              ) {
+                                setPosterPositionX(
+                                  50
+                                );
+
+                                setPosterPositionY(
+                                  50
+                                );
+
+                                setPosterZoom(
+                                  1
+                                );
+                              }
+                            }}
+                          />
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* SAVE */}
+          {/* ======================================
+              SAVE
+          ====================================== */}
 
-          <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-zinc-800 pt-6">
-            <button
-              type="button"
-              onClick={() => {
-                void restoreAutomatic();
-              }}
-              disabled={
-                saving
-              }
-              className="flex h-10 items-center gap-2 rounded-xl border border-zinc-800 px-4 text-sm text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
-            >
-              <RotateCcw
-                size={16}
-              />
-
-              Restaurar todo
-            </button>
-
-            <button
-              type="button"
-              disabled={
-                saving ||
-                uploading !==
-                  null
-              }
-              onClick={() => {
-                void saveOverride();
-              }}
-              className="flex h-10 items-center gap-2 rounded-xl bg-fuchsia-500 px-4 text-sm font-semibold text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2
-                  size={16}
-                  className="animate-spin"
+          <div className="sticky bottom-0 z-30 -mx-4 mt-8 border-t border-zinc-800 bg-zinc-950/95 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 xl:static xl:mx-0 xl:mt-10 xl:flex xl:flex-wrap xl:items-center xl:gap-3 xl:bg-transparent xl:px-0 xl:pt-6 xl:backdrop-blur-none">
+            <div className="grid grid-cols-2 gap-2 xl:flex">
+              <button
+                type="button"
+                onClick={() => {
+                  void restoreAutomatic();
+                }}
+                disabled={
+                  saving
+                }
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-zinc-800 px-3 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-white disabled:opacity-50 sm:text-sm"
+              >
+                <RotateCcw
+                  size={
+                    15
+                  }
                 />
-              ) : (
-                <Save
-                  size={16}
-                />
-              )}
 
-              Guardar
-            </button>
+                Restaurar
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  saving ||
+                  uploading !==
+                    null
+                }
+                onClick={() => {
+                  void saveOverride();
+                }}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-fuchsia-500 px-3 text-xs font-semibold text-white transition hover:bg-fuchsia-400 disabled:opacity-50 sm:text-sm xl:px-5"
+              >
+                {saving ? (
+                  <Loader2
+                    size={
+                      16
+                    }
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Save
+                    size={
+                      16
+                    }
+                  />
+                )}
+
+                Guardar
+              </button>
+            </div>
 
             {message && (
               <p
-                className={`text-sm ${
+                className={`mt-2 text-xs xl:mt-0 xl:text-sm ${
                   message.startsWith(
                     "Error:"
                   )
@@ -1607,6 +1933,35 @@ export default function MediaAdminClient() {
         </section>
       )}
     </div>
+  );
+}
+
+function CurrentStatus({
+  custom,
+  centered = false,
+}: {
+  custom:
+    boolean;
+
+  centered?:
+    boolean;
+}) {
+  return (
+    <p
+      className={`mt-2 text-[10px] font-medium ${
+        centered
+          ? "text-center lg:text-left"
+          : ""
+      } ${
+        custom
+          ? "text-fuchsia-400"
+          : "text-zinc-600"
+      }`}
+    >
+      {custom
+        ? "Usando imagen personalizada"
+        : "Usando imagen automática"}
+    </p>
   );
 }
 
@@ -1637,13 +1992,14 @@ function RangeControl({
   suffix:
     string;
 
-  onChange: (
-    value:
-      number
-  ) => void;
+  onChange:
+    (
+      value:
+        number
+    ) => void;
 }) {
   return (
-    <label>
+    <label className="block min-w-0">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-medium text-zinc-500">
           {
@@ -1652,14 +2008,13 @@ function RangeControl({
         </span>
 
         <span className="font-mono text-xs text-zinc-400">
-          {
-            Number.isInteger(
-              value
-            )
-              ? value
-              : value.toFixed(
-                  2
-                )}
+          {Number.isInteger(
+            value
+          )
+            ? value
+            : value.toFixed(
+                2
+              )}
           {
             suffix
           }
@@ -1689,7 +2044,7 @@ function RangeControl({
             )
           )
         }
-        className="mt-3 w-full accent-fuchsia-500"
+        className="mt-3 h-6 w-full accent-fuchsia-500"
       />
     </label>
   );
@@ -1719,7 +2074,7 @@ function ArtworkButton({
       onClick={
         onClick
       }
-      className={`w-44 shrink-0 overflow-hidden rounded-xl border text-left transition ${
+      className={`w-[150px] shrink-0 overflow-hidden rounded-xl border text-left transition sm:w-44 ${
         active
           ? "border-fuchsia-400"
           : "border-zinc-800 hover:border-zinc-600"
@@ -1737,7 +2092,13 @@ function ArtworkButton({
         />
       </div>
 
-      <p className="truncate bg-zinc-950 px-2 py-2 text-[11px] text-zinc-500">
+      <p
+        className={`truncate bg-zinc-950 px-2 py-2 text-[10px] sm:text-[11px] ${
+          active
+            ? "text-fuchsia-300"
+            : "text-zinc-500"
+        }`}
+      >
         {
           label
         }
@@ -1748,10 +2109,14 @@ function ArtworkButton({
 
 function PosterButton({
   url,
+  label,
   active,
   onClick,
 }: {
   url:
+    string;
+
+  label:
     string;
 
   active:
@@ -1766,21 +2131,37 @@ function PosterButton({
       onClick={
         onClick
       }
-      className={`relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-lg border transition ${
-        active
-          ? "border-fuchsia-400"
-          : "border-zinc-800 hover:border-zinc-600"
-      }`}
+      className="w-[86px] shrink-0 text-left sm:w-24"
     >
-      <Image
-        src={
-          url
+      <div
+        className={`relative aspect-[2/3] overflow-hidden rounded-lg border transition ${
+          active
+            ? "border-fuchsia-400"
+            : "border-zinc-800 hover:border-zinc-600"
+        }`}
+      >
+        <Image
+          src={
+            url
+          }
+          alt=""
+          fill
+          unoptimized
+          className="object-cover"
+        />
+      </div>
+
+      <p
+        className={`mt-1.5 truncate text-[9px] sm:text-[10px] ${
+          active
+            ? "text-fuchsia-300"
+            : "text-zinc-600"
+        }`}
+      >
+        {
+          label
         }
-        alt=""
-        fill
-        unoptimized
-        className="object-cover"
-      />
+      </p>
     </button>
   );
 }

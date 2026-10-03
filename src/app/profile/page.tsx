@@ -53,16 +53,16 @@ type MediaType =
   | "BOOK"
   | "GAME";
 
-  type ArtworkFields = {
-    poster_position_x?:
-      number;
+type ArtworkFields = {
+  poster_position_x?:
+    number;
 
-    poster_position_y?:
-      number;
+  poster_position_y?:
+    number;
 
-    poster_zoom?:
-      number;
-  };
+  poster_zoom?:
+    number;
+};
 
 type SectionKey =
   | "ACTIVITY"
@@ -206,6 +206,7 @@ function isMobileTab(
 function getMediaHref(
   mediaType:
     MediaType,
+
   externalId:
     string
 ) {
@@ -613,7 +614,8 @@ export default async function ProfilePage({
       ...item,
 
       cover_url:
-        override?.poster_url ??
+        override
+          ?.poster_url ??
         item.cover_url,
 
       poster_position_x:
@@ -694,8 +696,8 @@ export default async function ProfilePage({
     >();
 
   for (
-    const item
-    of library
+    const item of
+    library
   ) {
     registeredMedia.set(
       `${item.media_type}:${item.external_id}`,
@@ -704,8 +706,8 @@ export default async function ProfilePage({
   }
 
   for (
-    const review
-    of reviews
+    const review of
+    reviews
   ) {
     registeredMedia.set(
       `${review.media_type}:${review.external_id}`,
@@ -724,12 +726,13 @@ export default async function ProfilePage({
   };
 
   for (
-    const mediaType
-    of registeredMedia.values()
+    const mediaType of
+    registeredMedia.values()
   ) {
     mediaCounts[
       mediaType
-    ] += 1;
+    ] +=
+      1;
   }
 
   const recentReviews =
@@ -740,21 +743,7 @@ export default async function ProfilePage({
 
   return (
     <main className="pb-20">
-      {/*
-       * IMPORTANTE:
-       * AppShell ya elimina el padding
-       * exterior de /profile.
-       *
-       * Aquí NO hay:
-       * -mt
-       * -mx
-       * translate
-       * 100dvw
-       */}
-
       <div className="mx-auto w-full lg:max-w-[1160px]">
-        {/* PROFILE HEADER */}
-
         <ProfileMediaHeader
           banner={
             profile?.banner_url ? (
@@ -799,7 +788,9 @@ export default async function ProfilePage({
               className="inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-950/95 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
             >
               <Settings2
-                size={15}
+                size={
+                  15
+                }
               />
 
               <span className="hidden sm:inline">
@@ -885,8 +876,6 @@ export default async function ProfilePage({
           </div>
         </ProfileMediaHeader>
 
-        {/* MOBILE / TABLET TABS */}
-
         <nav className="mt-6 grid w-full grid-cols-3 border-y border-zinc-800 lg:hidden">
           <MobileTabLink
             href="/profile?tab=profile"
@@ -918,8 +907,6 @@ export default async function ProfilePage({
             Pendientes
           </MobileTabLink>
         </nav>
-
-        {/* MOBILE / TABLET CONTENT */}
 
         <div className="px-4 pt-7 lg:hidden">
           {activeTab ===
@@ -980,11 +967,7 @@ export default async function ProfilePage({
           )}
         </div>
 
-        {/* DESKTOP */}
-
         <div className="mt-9 hidden items-start gap-10 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_270px] xl:grid-cols-[minmax(0,1fr)_290px]">
-          {/* MAIN */}
-
           <div className="min-w-0">
             {username && (
               <ProfileSections
@@ -1004,8 +987,6 @@ export default async function ProfilePage({
             )}
           </div>
 
-          {/* SIDEBAR */}
-
           <aside className="space-y-8 lg:sticky lg:top-24">
             <SidebarSection
               title="Estadísticas"
@@ -1014,7 +995,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <Library
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Registrados"
@@ -1026,7 +1009,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <Clapperboard
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Películas"
@@ -1038,7 +1023,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <Tv
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Series"
@@ -1050,7 +1037,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <Gamepad2
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Juegos"
@@ -1062,7 +1051,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <BookOpen
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Libros"
@@ -1074,7 +1065,9 @@ export default async function ProfilePage({
                 <StatRow
                   icon={
                     <Heart
-                      size={14}
+                      size={
+                        14
+                      }
                     />
                   }
                   label="Reviews"
@@ -1118,30 +1111,31 @@ export default async function ProfilePage({
                         className="group flex items-center gap-3"
                       >
                         {item.cover_url ? (
-                          <Image
-                            src={
-                              item.cover_url
-                            }
-                            alt={
-                              item.title
-                            }
-                            width={80}
-                            height={120}
-                            unoptimized={
-                              shouldUseOriginalImage(
+                          <div className="relative h-14 w-10 shrink-0 overflow-hidden bg-zinc-900">
+                            <Image
+                              src={
                                 item.cover_url
-                              )
-                            }
-                            className="h-14 w-10 shrink-0 object-cover"
+                              }
+                              alt={
+                                item.title
+                              }
+                              fill
+                              sizes="40px"
+                              unoptimized={
+                                shouldUseOriginalImage(
+                                  item.cover_url
+                                )
+                              }
+                              className="object-cover"
+                              style={{
+                                objectPosition:
+                                  `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
 
-                            style={{
-                              objectPosition:
-                                `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
-
-                              transform:
-                                `scale(${item.poster_zoom ?? 1})`,
-                            }}
-                          />
+                                transform:
+                                  `scale(${item.poster_zoom ?? 1})`,
+                              }}
+                            />
+                          </div>
                         ) : (
                           <div className="h-14 w-10 shrink-0 bg-zinc-900" />
                         )}
@@ -1191,30 +1185,31 @@ export default async function ProfilePage({
                         className="group flex gap-3"
                       >
                         {review.cover_url ? (
-                          <Image
-                            src={
-                              review.cover_url
-                            }
-                            alt={
-                              review.title
-                            }
-                            width={80}
-                            height={120}
-                            unoptimized={
-                              shouldUseOriginalImage(
+                          <div className="relative h-14 w-10 shrink-0 overflow-hidden bg-zinc-900">
+                            <Image
+                              src={
                                 review.cover_url
-                              )
-                            }
-                            className="h-14 w-10 shrink-0 object-cover"
+                              }
+                              alt={
+                                review.title
+                              }
+                              fill
+                              sizes="40px"
+                              unoptimized={
+                                shouldUseOriginalImage(
+                                  review.cover_url
+                                )
+                              }
+                              className="object-cover"
+                              style={{
+                                objectPosition:
+                                  `${review.poster_position_x ?? 50}% ${review.poster_position_y ?? 50}%`,
 
-                            style={{
-                              objectPosition:
-                                `${review.poster_position_x ?? 50}% ${review.poster_position_y ?? 50}%`,
-
-                              transform:
-                                `scale(${review.poster_zoom ?? 1})`,
-                            }}
-                          />
+                                transform:
+                                  `scale(${review.poster_zoom ?? 1})`,
+                              }}
+                            />
+                          </div>
                         ) : (
                           <div className="h-14 w-10 shrink-0 bg-zinc-900" />
                         )}
@@ -1386,7 +1381,7 @@ function PendingGrid({
             )}
             className="group min-w-0"
           >
-            <div className="aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
               {item.cover_url ? (
                 <Image
                   src={
@@ -1395,14 +1390,21 @@ function PendingGrid({
                   alt={
                     item.title
                   }
-                  width={500}
-                  height={750}
+                  fill
+                  sizes="120px"
                   unoptimized={
                     shouldUseOriginalImage(
                       item.cover_url
                     )
                   }
-                  className="h-full w-full object-cover"
+                  className="object-cover"
+                  style={{
+                    objectPosition:
+                      `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
+
+                    transform:
+                      `scale(${item.poster_zoom ?? 1})`,
+                  }}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-zinc-600">

@@ -1,18 +1,35 @@
-import { Heart } from "lucide-react";
+import {
+  Heart,
+} from "lucide-react";
+
 import Image from "next/image";
 import Link from "next/link";
 
 import DiscoverSection from "@/components/home/DiscoverSection";
+import PublicLanding from "@/components/PublicLanding";
 
 import {
   getDiscoverItems,
 } from "@/lib/discover";
 
-import PublicLanding from "@/components/PublicLanding";
-import { shouldUseOriginalImage } from "@/lib/image-optimization";
-import { createClient } from "@/lib/supabase/server";
+import {
+  shouldUseOriginalImage,
+} from "@/lib/image-optimization";
 
-type MediaType = "MOVIE" | "SERIES" | "BOOK" | "GAME";
+import {
+  getMediaArtworkMapKey,
+  getMixedMediaArtworkOverrides,
+} from "@/lib/media-artwork";
+
+import {
+  createClient,
+} from "@/lib/supabase/server";
+
+type MediaType =
+  | "MOVIE"
+  | "SERIES"
+  | "BOOK"
+  | "GAME";
 
 type ActivityType =
   | "ADDED_PENDING"
@@ -21,55 +38,181 @@ type ActivityType =
   | "COMPLETED"
   | "REVIEWED";
 
-type ActivityEvent = {
-  id: string;
-  user_id: string;
-  activity_type: ActivityType;
-  media_type: MediaType;
-  external_id: string;
-  title: string;
-  cover_url: string | null;
-  season_number: number | null;
-  episode_number: number | null;
-  episode_title: string | null;
-  created_at: string;
+type ArtworkFields = {
+  poster_position_x?:
+    number;
+
+  poster_position_y?:
+    number;
+
+  poster_zoom?:
+    number;
 };
 
+type LibraryItem = {
+  id:
+    string;
+
+  external_id:
+    string;
+
+  media_type:
+    MediaType;
+
+  title:
+    string;
+
+  cover_url:
+    | string
+    | null;
+
+  release_year:
+    | number
+    | null;
+
+  status:
+    string;
+
+  created_at:
+    string;
+} & ArtworkFields;
+
+type ActivityEvent = {
+  id:
+    string;
+
+  user_id:
+    string;
+
+  activity_type:
+    ActivityType;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title:
+    string;
+
+  cover_url:
+    | string
+    | null;
+
+  season_number:
+    | number
+    | null;
+
+  episode_number:
+    | number
+    | null;
+
+  episode_title:
+    | string
+    | null;
+
+  created_at:
+    string;
+} & ArtworkFields;
+
 type FriendProfile = {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
+  id:
+    string;
+
+  username:
+    | string
+    | null;
+
+  display_name:
+    | string
+    | null;
+
+  avatar_url:
+    | string
+    | null;
 };
 
 type FriendReview = {
-  id: string;
-  user_id: string;
-  media_type: MediaType;
-  external_id: string;
-  title: string;
-  review_text: string | null;
-  liked: boolean;
-  contains_spoilers: boolean;
-  cover_url: string | null;
-  created_at: string;
-};
+  id:
+    string;
+
+  user_id:
+    string;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title:
+    string;
+
+  review_text:
+    | string
+    | null;
+
+  liked:
+    boolean;
+
+  contains_spoilers:
+    boolean;
+
+  cover_url:
+    | string
+    | null;
+
+  created_at:
+    string;
+} & ArtworkFields;
 
 type SingleFriendActivity = {
-  type: "single";
-  activity: ActivityEvent;
+  type:
+    "single";
+
+  activity:
+    ActivityEvent;
 };
 
 type EpisodeActivityGroup = {
-  type: "episode-group";
-  id: string;
-  user_id: string;
-  external_id: string;
-  title: string;
-  cover_url: string | null;
-  season_number: number | null;
-  episode_numbers: number[];
-  created_at: string;
+  type:
+    "episode-group";
+
+  id:
+    string;
+
+  user_id:
+    string;
+
+  external_id:
+    string;
+
+  title:
+    string;
+
+  cover_url:
+    | string
+    | null;
+
+  poster_position_x?:
+    number;
+
+  poster_position_y?:
+    number;
+
+  poster_zoom?:
+    number;
+
+  season_number:
+    | number
+    | null;
+
+  episode_numbers:
+    number[];
+
+  created_at:
+    string;
 };
 
 type FriendActivityItem =
@@ -77,24 +220,35 @@ type FriendActivityItem =
   | EpisodeActivityGroup;
 
 export default async function HomePage() {
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
 
-  if (!user) {
-    return <PublicLanding />;
+  if (
+    !user
+  ) {
+    return (
+      <PublicLanding />
+    );
   }
 
-    const [
-      libraryResult,
-      activityResult,
-      followingResult,
-      discoverItems,
-    ] = await Promise.all([
+  const [
+    libraryResult,
+    activityResult,
+    followingResult,
+    discoverItems,
+  ] =
+    await Promise.all([
       supabase
-        .from("library_items")
+        .from(
+          "library_items"
+        )
         .select(`
           id,
           external_id,
@@ -105,13 +259,22 @@ export default async function HomePage() {
           status,
           created_at
         `)
-        .eq("user_id", user.id)
-        .order("created_at", {
-          ascending: false,
-        }),
-      
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        ),
+
       supabase
-        .from("activity_events")
+        .from(
+          "activity_events"
+        )
         .select(`
           id,
           user_id,
@@ -125,22 +288,41 @@ export default async function HomePage() {
           episode_title,
           created_at
         `)
-        .eq("user_id", user.id)
-        .in("activity_type", [
-          "EPISODE_WATCHED",
-          "COMPLETED",
-          "REVIEWED",
-        ])
-        .order("created_at", {
-          ascending: false,
-        })
-        .limit(6),
-      
+        .eq(
+          "user_id",
+          user.id
+        )
+        .in(
+          "activity_type",
+          [
+            "EPISODE_WATCHED",
+            "COMPLETED",
+            "REVIEWED",
+          ]
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(
+          6
+        ),
+
       supabase
-        .from("profile_follows")
-        .select("following_id")
-        .eq("follower_id", user.id),
-      
+        .from(
+          "profile_follows"
+        )
+        .select(
+          "following_id"
+        )
+        .eq(
+          "follower_id",
+          user.id
+        ),
+
       getDiscoverItems()
         .catch(
           (
@@ -150,13 +332,15 @@ export default async function HomePage() {
               "Error loading discover items:",
               error
             );
-          
+
             return [];
           }
         ),
     ]);
-     
-  if (libraryResult.error) {
+
+  if (
+    libraryResult.error
+  ) {
     return (
       <main>
         <p className="text-red-400">
@@ -166,50 +350,54 @@ export default async function HomePage() {
     );
   }
 
-  const library =
-    libraryResult.data ?? [];
+  if (
+    activityResult.error
+  ) {
+    console.error(
+      "Error loading activity:",
+      activityResult.error
+    );
+  }
 
-  const ownActivity =
-    (activityResult.data ??
-      []) as ActivityEvent[];
+  if (
+    followingResult.error
+  ) {
+    console.error(
+      "Error loading following:",
+      followingResult.error
+    );
+  }
+
+  const rawLibrary =
+    (
+      libraryResult.data ??
+      []
+    ) as LibraryItem[];
+
+  const rawOwnActivity =
+    (
+      activityResult.data ??
+      []
+    ) as ActivityEvent[];
 
   const followingIds =
-    (followingResult.data ?? []).map(
-      (follow) => follow.following_id
+    (
+      followingResult.data ??
+      []
+    ).map(
+      (
+        follow
+      ) =>
+        follow.following_id
     );
 
-  const pendingItems =
-    library
-      .filter((item) => {
-        if (
-          item.media_type === "GAME" ||
-          item.media_type === "SERIES"
-        ) {
-          return (
-            item.status ===
-            "IN_PROGRESS"
-          );
-        }
-
-        if (
-          item.media_type === "MOVIE" ||
-          item.media_type === "BOOK"
-        ) {
-          return (
-            item.status ===
-            "PENDING"
-          );
-        }
-
-        return false;
-      })
-      .slice(0, 12);
-
   let rawFriendActivity:
-    ActivityEvent[] = [];
+    ActivityEvent[] =
+    [];
 
-  let friendReviews:
-    FriendReview[] = [];
+  let rawFriendReviews:
+    FriendReview[] =
+    [];
 
   const friendProfiles =
     new Map<
@@ -217,99 +405,141 @@ export default async function HomePage() {
       FriendProfile
     >();
 
-  if (followingIds.length > 0) {
+  if (
+    followingIds.length >
+    0
+  ) {
     const [
       friendActivityResult,
       friendReviewsResult,
       friendProfilesResult,
-    ] = await Promise.all([
-      supabase
-        .from("activity_events")
-        .select(`
-          id,
-          user_id,
-          activity_type,
-          media_type,
-          external_id,
-          title,
-          cover_url,
-          season_number,
-          episode_number,
-          episode_title,
-          created_at
-        `)
-        .in(
-          "user_id",
-          followingIds
-        )
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          }
-        )
-        .limit(40),
+    ] =
+      await Promise.all([
+        supabase
+          .from(
+            "activity_events"
+          )
+          .select(`
+            id,
+            user_id,
+            activity_type,
+            media_type,
+            external_id,
+            title,
+            cover_url,
+            season_number,
+            episode_number,
+            episode_title,
+            created_at
+          `)
+          .in(
+            "user_id",
+            followingIds
+          )
+          .order(
+            "created_at",
+            {
+              ascending:
+                false,
+            }
+          )
+          .limit(
+            40
+          ),
 
-      supabase
-        .from("reviews")
-        .select(`
-          id,
-          user_id,
-          media_type,
-          external_id,
-          title,
-          review_text,
-          liked,
-          contains_spoilers,
-          cover_url,
-          created_at
-        `)
-        .in(
-          "user_id",
-          followingIds
-        )
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          }
-        )
-        .limit(30),
+        supabase
+          .from(
+            "reviews"
+          )
+          .select(`
+            id,
+            user_id,
+            media_type,
+            external_id,
+            title,
+            review_text,
+            liked,
+            contains_spoilers,
+            cover_url,
+            created_at
+          `)
+          .in(
+            "user_id",
+            followingIds
+          )
+          .order(
+            "created_at",
+            {
+              ascending:
+                false,
+            }
+          )
+          .limit(
+            30
+          ),
 
-      supabase
-        .from("profiles")
-        .select(`
-          id,
-          username,
-          display_name,
-          avatar_url
-        `)
-        .in(
-          "id",
-          followingIds
-        ),
-    ]);
+        supabase
+          .from(
+            "profiles"
+          )
+          .select(`
+            id,
+            username,
+            display_name,
+            avatar_url
+          `)
+          .in(
+            "id",
+            followingIds
+          ),
+      ]);
+
+    if (
+      friendActivityResult.error
+    ) {
+      console.error(
+        "Error loading friend activity:",
+        friendActivityResult.error
+      );
+    }
+
+    if (
+      friendReviewsResult.error
+    ) {
+      console.error(
+        "Error loading friend reviews:",
+        friendReviewsResult.error
+      );
+    }
+
+    if (
+      friendProfilesResult.error
+    ) {
+      console.error(
+        "Error loading friend profiles:",
+        friendProfilesResult.error
+      );
+    }
 
     rawFriendActivity =
-      (friendActivityResult.data ??
-        []) as ActivityEvent[];
+      (
+        friendActivityResult.data ??
+        []
+      ) as ActivityEvent[];
 
-    const reviewPool =
+    rawFriendReviews =
       (
         friendReviewsResult.data ??
         []
       ).filter(
-        (review) =>
+        (
+          review
+        ) =>
           Boolean(
-            review.review_text?.trim()
+            review.review_text
+              ?.trim()
           )
       ) as FriendReview[];
-
-    friendReviews =
-      randomSubset(
-        reviewPool,
-        3
-      );
 
     for (
       const profile of
@@ -323,14 +553,142 @@ export default async function HomePage() {
     }
   }
 
+  /*
+   * ARTWORK GLOBAL
+   */
+
+  const artworkOverrides =
+    await getMixedMediaArtworkOverrides([
+      ...rawLibrary,
+      ...rawOwnActivity,
+      ...rawFriendActivity,
+      ...rawFriendReviews,
+    ]);
+
+  function applyArtwork<
+    T extends {
+      media_type:
+        MediaType;
+
+      external_id:
+        string;
+
+      cover_url:
+        | string
+        | null;
+    }
+  >(
+    item:
+      T
+  ): T &
+    ArtworkFields {
+    const override =
+      artworkOverrides.get(
+        getMediaArtworkMapKey(
+          item.media_type,
+          item.external_id
+        )
+      );
+
+    return {
+      ...item,
+
+      cover_url:
+        override
+          ?.poster_url ??
+        item.cover_url,
+
+      poster_position_x:
+        override
+          ?.poster_position_x ??
+        50,
+
+      poster_position_y:
+        override
+          ?.poster_position_y ??
+        50,
+
+      poster_zoom:
+        override
+          ?.poster_zoom ??
+        1,
+    };
+  }
+
+  const library =
+    rawLibrary.map(
+      applyArtwork
+    );
+
+  const ownActivity =
+    rawOwnActivity.map(
+      applyArtwork
+    );
+
+  const friendActivitySource =
+    rawFriendActivity.map(
+      applyArtwork
+    );
+
+  const reviewPool =
+    rawFriendReviews.map(
+      applyArtwork
+    );
+
+  const pendingItems =
+    library
+      .filter(
+        (
+          item
+        ) => {
+          if (
+            item.media_type ===
+              "GAME" ||
+            item.media_type ===
+              "SERIES"
+          ) {
+            return (
+              item.status ===
+              "IN_PROGRESS"
+            );
+          }
+
+          if (
+            item.media_type ===
+              "MOVIE" ||
+            item.media_type ===
+              "BOOK"
+          ) {
+            return (
+              item.status ===
+              "PENDING"
+            );
+          }
+
+          return false;
+        }
+      )
+      .slice(
+        0,
+        12
+      );
+
+  const friendReviews =
+    randomSubset(
+      reviewPool,
+      3
+    );
+
   const friendActivity =
     groupFriendActivity(
-      rawFriendActivity
-    ).slice(0, 5);
+      friendActivitySource
+    ).slice(
+      0,
+      5
+    );
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-hidden pb-14">
-     
       {/* TENDENCIAS */}
 
       <DiscoverSection
@@ -348,16 +706,18 @@ export default async function HomePage() {
         {pendingItems.length ===
         0 ? (
           <EmptyState>
-            No tienes películas o
-            libros pendientes, ni
-            series o juegos en curso.
+            No tienes películas o libros pendientes, ni series o juegos en curso.
           </EmptyState>
         ) : (
           <div className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 md:grid-cols-4 lg:grid-cols-6 xl:gap-x-5">
             {pendingItems.map(
-              (item) => (
+              (
+                item
+              ) => (
                 <MediaPoster
-                  key={item.id}
+                  key={
+                    item.id
+                  }
                   href={getMediaHref(
                     item.media_type,
                     item.external_id
@@ -367,6 +727,18 @@ export default async function HomePage() {
                   }
                   image={
                     item.cover_url
+                  }
+                  positionX={
+                    item.poster_position_x ??
+                    50
+                  }
+                  positionY={
+                    item.poster_position_y ??
+                    50
+                  }
+                  zoom={
+                    item.poster_zoom ??
+                    1
                   }
                   footer={getPendingLabel(
                     item.media_type
@@ -391,8 +763,7 @@ export default async function HomePage() {
           {ownActivity.length ===
           0 ? (
             <EmptyState>
-              Todavía no tienes
-              actividad reciente.
+              Todavía no tienes actividad reciente.
             </EmptyState>
           ) : (
             <div className="overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/30">
@@ -438,9 +809,7 @@ export default async function HomePage() {
           {friendActivity.length ===
           0 ? (
             <EmptyState>
-              Cuando las personas que
-              sigues tengan actividad,
-              aparecerá aquí.
+              Cuando las personas que sigues tengan actividad, aparecerá aquí.
             </EmptyState>
           ) : (
             <div className="overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/30">
@@ -510,14 +879,14 @@ export default async function HomePage() {
         {friendReviews.length ===
         0 ? (
           <EmptyState>
-            Cuando las personas que
-            sigues escriban reviews,
-            algunas aparecerán aquí.
+            Cuando las personas que sigues escriban reviews, algunas aparecerán aquí.
           </EmptyState>
         ) : (
           <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {friendReviews.map(
-              (review) => {
+              (
+                review
+              ) => {
                 const profile =
                   friendProfiles.get(
                     review.user_id
@@ -553,11 +922,20 @@ function HomeSection({
   compact = false,
   children,
 }: {
-  title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
-  compact?: boolean;
-  children: React.ReactNode;
+  title:
+    string;
+
+  subtitle?:
+    string;
+
+  action?:
+    React.ReactNode;
+
+  compact?:
+    boolean;
+
+  children:
+    React.ReactNode;
 }) {
   return (
     <section
@@ -570,20 +948,28 @@ function HomeSection({
       <div className="mb-4 flex min-w-0 flex-col gap-2 border-b border-zinc-800 pb-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold uppercase tracking-[0.16em] text-zinc-300">
-            {title}
+            {
+              title
+            }
           </h2>
 
           {subtitle && (
             <p className="mt-1 text-sm text-zinc-600">
-              {subtitle}
+              {
+                subtitle
+              }
             </p>
           )}
         </div>
 
-        {action}
+        {
+          action
+        }
       </div>
 
-      {children}
+      {
+        children
+      }
     </section>
   );
 }
@@ -592,45 +978,82 @@ function MediaPoster({
   href,
   title,
   image,
+  positionX,
+  positionY,
+  zoom,
   footer,
 }: {
-  href: string;
-  title: string;
-  image: string | null;
-  footer: string;
+  href:
+    string;
+
+  title:
+    string;
+
+  image:
+    | string
+    | null;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
+
+  footer:
+    string;
 }) {
   return (
     <Link
-      href={href}
+      href={
+        href
+      }
       className="group block min-w-0"
     >
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition group-hover:border-zinc-600">
         {image ? (
           <Image
-            src={image}
-            alt={title}
-            width={500}
-            height={750}
+            src={
+              image
+            }
+            alt={
+              title
+            }
+            fill
+            sizes="(max-width: 640px) 50vw, 250px"
             unoptimized={
               shouldUseOriginalImage(
                 image
               )
             }
-            className="aspect-[2/3] w-full object-cover transition duration-200 group-hover:brightness-110"
+            className="object-cover transition duration-200 group-hover:brightness-110"
+            style={{
+              objectPosition:
+                `${positionX}% ${positionY}%`,
+
+              transform:
+                `scale(${zoom})`,
+            }}
           />
         ) : (
-          <div className="flex aspect-[2/3] items-center justify-center px-3 text-center text-sm text-zinc-600">
+          <div className="flex h-full items-center justify-center px-3 text-center text-sm text-zinc-600">
             Sin imagen
           </div>
         )}
       </div>
 
       <h3 className="mt-2 line-clamp-2 min-h-10 text-sm font-medium leading-5 text-zinc-300 transition group-hover:text-white sm:text-[15px]">
-        {title}
+        {
+          title
+        }
       </h3>
 
       <p className="mt-0.5 truncate text-xs text-zinc-600 sm:text-[13px]">
-        {footer}
+        {
+          footer
+        }
       </p>
     </Link>
   );
@@ -640,8 +1063,11 @@ function RecentActivityRow({
   activity,
   border,
 }: {
-  activity: ActivityEvent;
-  border: boolean;
+  activity:
+    ActivityEvent;
+
+  border:
+    boolean;
 }) {
   return (
     <Link
@@ -661,6 +1087,18 @@ function RecentActivityRow({
         }
         title={
           activity.title
+        }
+        positionX={
+          activity.poster_position_x ??
+          50
+        }
+        positionY={
+          activity.poster_position_y ??
+          50
+        }
+        zoom={
+          activity.poster_zoom ??
+          1
         }
       />
 
@@ -704,9 +1142,15 @@ function FriendActivityRow({
   profile,
   border,
 }: {
-  item: FriendActivityItem;
-  profile: FriendProfile | null;
-  border: boolean;
+  item:
+    FriendActivityItem;
+
+  profile:
+    | FriendProfile
+    | null;
+
+  border:
+    boolean;
 }) {
   const name =
     getProfileName(
@@ -721,27 +1165,59 @@ function FriendActivityRow({
       : null;
 
   const externalId =
-    item.type === "single"
+    item.type ===
+    "single"
       ? item.activity.external_id
       : item.external_id;
 
   const mediaType =
-    item.type === "single"
+    item.type ===
+    "single"
       ? item.activity.media_type
       : "SERIES";
 
   const title =
-    item.type === "single"
+    item.type ===
+    "single"
       ? item.activity.title
       : item.title;
 
   const cover =
-    item.type === "single"
+    item.type ===
+    "single"
       ? item.activity.cover_url
       : item.cover_url;
 
+  const positionX =
+    item.type ===
+    "single"
+      ? item.activity
+          .poster_position_x ??
+        50
+      : item.poster_position_x ??
+        50;
+
+  const positionY =
+    item.type ===
+    "single"
+      ? item.activity
+          .poster_position_y ??
+        50
+      : item.poster_position_y ??
+        50;
+
+  const zoom =
+    item.type ===
+    "single"
+      ? item.activity
+          .poster_zoom ??
+        1
+      : item.poster_zoom ??
+        1;
+
   const createdAt =
-    item.type === "single"
+    item.type ===
+    "single"
       ? item.activity.created_at
       : item.created_at;
 
@@ -755,7 +1231,8 @@ function FriendActivityRow({
     item.type ===
     "episode-group"
       ? item.episode_numbers
-          .length === 1
+          .length ===
+        1
         ? `vio el episodio ${item.episode_numbers[0]} de`
         : `vio ${item.episode_numbers.length} episodios de`
       : getFriendActivityText(
@@ -771,15 +1248,32 @@ function FriendActivityRow({
       }`}
     >
       <SmallCover
-        image={cover}
-        title={title}
+        image={
+          cover
+        }
+        title={
+          title
+        }
+        positionX={
+          positionX
+        }
+        positionY={
+          positionY
+        }
+        zoom={
+          zoom
+        }
       />
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <ProfileAvatar
-            profile={profile}
-            size={24}
+            profile={
+              profile
+            }
+            size={
+              24
+            }
           />
 
           {profileHref ? (
@@ -789,18 +1283,24 @@ function FriendActivityRow({
               }
               className="truncate text-sm font-semibold text-zinc-300 transition hover:text-fuchsia-300"
             >
-              {name}
+              {
+                name
+              }
             </Link>
           ) : (
             <span className="truncate text-sm font-semibold text-zinc-300">
-              {name}
+              {
+                name
+              }
             </span>
           )}
         </div>
 
         <p className="mt-1 min-w-0 truncate text-sm">
           <span className="text-zinc-600">
-            {actionText}{" "}
+            {
+              actionText
+            }{" "}
           </span>
 
           <Link
@@ -809,7 +1309,9 @@ function FriendActivityRow({
             }
             className="font-medium text-zinc-300 transition hover:text-white"
           >
-            {title}
+            {
+              title
+            }
           </Link>
         </p>
 
@@ -836,8 +1338,12 @@ function FriendReviewCard({
   review,
   profile,
 }: {
-  review: FriendReview;
-  profile: FriendProfile | null;
+  review:
+    FriendReview;
+
+  profile:
+    | FriendProfile
+    | null;
 }) {
   const displayName =
     getProfileName(
@@ -860,7 +1366,9 @@ function FriendReviewCard({
   return (
     <article className="flex min-w-0 gap-3 rounded-xl border border-zinc-800 bg-zinc-900/20 p-3.5 transition hover:border-zinc-700 sm:gap-4 sm:p-4">
       <Link
-        href={mediaHref}
+        href={
+          mediaHref
+        }
         className="relative h-[112px] w-[76px] shrink-0 overflow-hidden rounded-md bg-zinc-900"
       >
         {review.cover_url ? (
@@ -879,6 +1387,13 @@ function FriendReviewCard({
               )
             }
             className="object-cover"
+            style={{
+              objectPosition:
+                `${review.poster_position_x ?? 50}% ${review.poster_position_y ?? 50}%`,
+
+              transform:
+                `scale(${review.poster_zoom ?? 1})`,
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center px-2 text-center text-xs text-zinc-700">
@@ -890,8 +1405,12 @@ function FriendReviewCard({
       <div className="min-w-0 flex-1 py-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <ProfileAvatar
-            profile={profile}
-            size={24}
+            profile={
+              profile
+            }
+            size={
+              24
+            }
           />
 
           {profileHref ? (
@@ -921,7 +1440,9 @@ function FriendReviewCard({
         </div>
 
         <Link
-          href={mediaHref}
+          href={
+            mediaHref
+          }
           className="mt-2.5 line-clamp-1 block text-[15px] font-semibold text-zinc-100 transition hover:text-fuchsia-300"
         >
           {
@@ -944,7 +1465,9 @@ function FriendReviewCard({
         {review.liked && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-red-400">
             <Heart
-              size={13}
+              size={
+                13
+              }
               fill="currentColor"
             />
 
@@ -980,7 +1503,8 @@ function groupFriendActivity(
   };
 
   const singles:
-    TimedItem[] = [];
+    TimedItem[] =
+    [];
 
   const episodeBuckets:
     EpisodeBucket[] =
@@ -1024,16 +1548,21 @@ function groupFriendActivity(
         activity.created_at
       ).getTime();
 
-    const key = [
-      activity.user_id,
-      activity.external_id,
-      activity.season_number ??
-        "unknown",
-    ].join(":");
+    const key =
+      [
+        activity.user_id,
+        activity.external_id,
+        activity.season_number ??
+          "unknown",
+      ].join(
+        ":"
+      );
 
     const existing =
       episodeBuckets.find(
-        (bucket) =>
+        (
+          bucket
+        ) =>
           bucket.key ===
             key &&
           bucket.newestTimestamp -
@@ -1041,7 +1570,9 @@ function groupFriendActivity(
             SESSION_WINDOW
       );
 
-    if (existing) {
+    if (
+      existing
+    ) {
       if (
         !existing.group
           .episode_numbers
@@ -1084,6 +1615,18 @@ function groupFriendActivity(
         cover_url:
           activity.cover_url,
 
+        poster_position_x:
+          activity.poster_position_x ??
+          50,
+
+        poster_position_y:
+          activity.poster_position_y ??
+          50,
+
+        poster_zoom:
+          activity.poster_zoom ??
+          1,
+
         season_number:
           activity.season_number,
 
@@ -1100,7 +1643,9 @@ function groupFriendActivity(
   const groupedEpisodes:
     TimedItem[] =
     episodeBuckets.map(
-      (bucket) => {
+      (
+        bucket
+      ) => {
         bucket.group
           .episode_numbers
           .sort(
@@ -1135,7 +1680,9 @@ function groupFriendActivity(
         first.timestamp
     )
     .map(
-      ({ item }) =>
+      ({
+        item,
+      }) =>
         item
     );
 }
@@ -1192,10 +1739,14 @@ function getEpisodeGroupLabel(
   const episodeList =
     numbers
       .map(
-        (episode) =>
+        (
+          episode
+        ) =>
           `E${episode}`
       )
-      .join(", ");
+      .join(
+        ", "
+      );
 
   return `${season}${episodeList}`;
 }
@@ -1205,8 +1756,8 @@ function ProfileAvatar({
   size,
 }: {
   profile:
-    FriendProfile |
-    null;
+    | FriendProfile
+    | null;
 
   size:
     number;
@@ -1274,13 +1825,25 @@ function ProfileAvatar({
 function SmallCover({
   image,
   title,
+  positionX,
+  positionY,
+  zoom,
 }: {
   image:
-    string |
-    null;
+    | string
+    | null;
 
   title:
     string;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
 }) {
   return (
     <div className="relative h-[54px] w-9 shrink-0 overflow-hidden rounded bg-zinc-900 sm:h-[58px] sm:w-10">
@@ -1300,6 +1863,13 @@ function SmallCover({
             )
           }
           className="object-cover"
+          style={{
+            objectPosition:
+              `${positionX}% ${positionY}%`,
+
+            transform:
+              `scale(${zoom})`,
+          }}
         />
       ) : (
         <div className="flex h-full items-center justify-center text-xs text-zinc-700">
@@ -1318,7 +1888,9 @@ function EmptyState({
 }) {
   return (
     <p className="py-6 text-sm text-zinc-600">
-      {children}
+      {
+        children
+      }
     </p>
   );
 }
@@ -1497,8 +2069,8 @@ function getFriendActivityText(
 
 function getProfileName(
   profile:
-    FriendProfile |
-    null
+    | FriendProfile
+    | null
 ) {
   return (
     profile?.display_name ||
@@ -1604,9 +2176,10 @@ function randomSubset<T>(
   maximum:
     number
 ) {
-  const result = [
-    ...values,
-  ];
+  const result =
+    [
+      ...values,
+    ];
 
   for (
     let index =
@@ -1628,11 +2201,19 @@ function randomSubset<T>(
       );
 
     [
-      result[index],
-      result[swapIndex],
+      result[
+        index
+      ],
+      result[
+        swapIndex
+      ],
     ] = [
-      result[swapIndex],
-      result[index],
+      result[
+        swapIndex
+      ],
+      result[
+        index
+      ],
     ];
   }
 

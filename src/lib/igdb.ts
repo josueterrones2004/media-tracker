@@ -5,48 +5,74 @@ const TWITCH_TOKEN_URL =
   "https://id.twitch.tv/oauth2/token";
 
 type TwitchTokenResponse = {
-  access_token: string;
-  expires_in: number;
-  token_type: string;
+  access_token:
+    string;
+
+  expires_in:
+    number;
+
+  token_type:
+    string;
 };
 
 type CachedToken = {
-  accessToken: string;
-  expiresAt: number;
+  accessToken:
+    string;
+
+  expiresAt:
+    number;
 };
 
 export type IGDBNamedItem = {
-  id: number;
-  name: string;
+  id:
+    number;
+
+  name:
+    string;
 };
 
 export type IGDBImage = {
-  id: number;
-  image_id: string;
+  id:
+    number;
 
-  width?: number;
-  height?: number;
+  image_id:
+    string;
+
+  width?:
+    number;
+
+  height?:
+    number;
 };
 
 export type IGDBAlternativeName = {
-  id: number;
-  name: string;
+  id:
+    number;
+
+  name:
+    string;
 };
 
 export type IGDBGameType = {
-  id?: number;
-  type?: string;
+  id?:
+    number;
+
+  type?:
+    string;
 };
 
 export type IGDBGame = {
-  id: number;
+  id:
+    number;
 
-  name: string;
+  name:
+    string;
 
   alternative_names?:
     IGDBAlternativeName[];
 
-  summary?: string;
+  summary?:
+    string;
 
   first_release_date?:
     number;
@@ -77,11 +103,15 @@ export type IGDBGame = {
 
   total_rating_count?:
     number;
+
+  hypes?:
+    number;
 };
 
 let cachedToken:
   | CachedToken
-  | null = null;
+  | null =
+    null;
 
 /*
  * CREDENTIALS
@@ -365,19 +395,37 @@ function shouldShowGame(
   game:
     IGDBGame
 ) {
-  if (
-    game.version_parent
-  ) {
-    return false;
-  }
-
   const type =
     normalizeIGDBGameType(
       game.game_type
         ?.type
     );
 
-  if (!type) {
+  /*
+   * Permitimos remakes/remasters aunque
+   * IGDB los relacione con otra versión.
+   *
+   * El resto de versiones secundarias
+   * se descartan para evitar duplicados.
+   */
+
+  if (
+    game.version_parent &&
+    type !==
+      "remaster" &&
+    type !==
+      "remake" &&
+    type !==
+      "expanded_game" &&
+    type !==
+      "standalone_expansion"
+  ) {
+    return false;
+  }
+
+  if (
+    !type
+  ) {
     return true;
   }
 
@@ -418,7 +466,8 @@ const DISCOVER_GAME_FIELDS = `
   game_type.type,
   version_parent,
   total_rating,
-  total_rating_count
+  total_rating_count,
+  hypes
 `;
 
 /*
@@ -434,7 +483,9 @@ export async function searchIGDBGames(
       query
     );
 
-  if (!cleanQuery) {
+  if (
+    !cleanQuery
+  ) {
     return [];
   }
 
@@ -457,9 +508,8 @@ export async function searchIGDBGames(
           game_type.type,
           version_parent,
           total_rating,
-          total_rating_count;
-
-        where version_parent = null;
+          total_rating_count,
+          hypes;
 
         limit 50;
       `
@@ -477,12 +527,6 @@ export async function searchIGDBGames(
 
 /*
  * POPULAR GAMES
- *
- * Se usan para Tendencias.
- *
- * Aquí sí permitimos títulos de varios
- * años atrás porque pueden seguir siendo
- * populares actualmente.
  */
 
 export async function getPopularIGDBGames() {
@@ -549,16 +593,20 @@ export async function getPopularIGDBGames() {
 }
 
 /*
- * RECENT + RELEVANT GAMES
+ * RECENT / UPCOMING GAMES
  *
- * Exclusivamente para el carrusel
- * "Estrenos y novedades".
+ * Ventana:
  *
- * Requisitos:
- * - ya debe haber salido
- * - máximo 6 meses de antigüedad
- * - debe tener cierta relevancia en IGDB
- * - debe disponer de imagen horizontal
+ * - hasta 30 días atrás
+ * - hasta 7 días hacia delante
+ *
+ * Los juegos futuros necesitan MUCHO hype.
+ * Los recién lanzados pueden entrar con una
+ * señal de relevancia menor porque todavía
+ * no han tenido tiempo de acumular ratings.
+ *
+ * Cuanto más antiguo sea un juego, más
+ * relevancia exigimos.
  */
 
 export async function getRecentIGDBGames() {
@@ -568,18 +616,20 @@ export async function getRecentIGDBGames() {
         1000
     );
 
-  const sixMonthsAgo =
-    Math.floor(
-      (
-        Date.now() -
-        183 *
-          24 *
-          60 *
-          60 *
-          1000
-      ) /
-        1000
-    );
+  const DAY =
+    24 *
+    60 *
+    60;
+
+  const pastLimit =
+    now -
+    30 *
+      DAY;
+
+  const futureLimit =
+    now +
+    7 *
+      DAY;
 
   const games =
     await requestIGDB<
@@ -588,36 +638,17 @@ export async function getRecentIGDBGames() {
       "games",
       `
         fields
-          id,
-          name,
-          summary,
-          cover.image_id,
-          cover.width,
-          cover.height,
-          artworks.image_id,
-          artworks.width,
-          artworks.height,
-          screenshots.image_id,
-          screenshots.width,
-          screenshots.height,
-          first_release_date,
-          game_type.type,
-          version_parent,
-          total_rating,
-          total_rating_count;
+          ${DISCOVER_GAME_FIELDS};
 
         where
-          version_parent = null
-          & cover != null
+          cover != null
           & first_release_date != null
-          & first_release_date >= ${sixMonthsAgo}
-          & first_release_date <= ${now}
-          & total_rating_count != null
-          & total_rating_count >= 30;
+          & first_release_date >= ${pastLimit}
+          & first_release_date <= ${futureLimit};
 
-        sort total_rating_count desc;
+        sort first_release_date desc;
 
-        limit 50;
+        limit 150;
       `
     );
 
@@ -644,52 +675,272 @@ export async function getRecentIGDBGames() {
           )
         )
     )
+    .filter(
+      (
+        game
+      ) => {
+        const release =
+          game.first_release_date;
+
+        if (
+          !release
+        ) {
+          return false;
+        }
+
+        const hypes =
+          game.hypes ??
+          0;
+
+        const ratings =
+          game.total_rating_count ??
+          0;
+
+        const differenceDays =
+          (
+            release -
+            now
+          ) /
+          DAY;
+
+        /*
+         * PRÓXIMOS LANZAMIENTOS
+         *
+         * Solo permitimos juegos realmente
+         * importantes.
+         *
+         * Un juego futuro no puede apoyarse
+         * en ratings porque todavía no salió.
+         */
+
+        if (
+          differenceDays >
+          0
+        ) {
+          return (
+            differenceDays <=
+              7 &&
+            hypes >=
+              35
+          );
+        }
+
+        const ageDays =
+          Math.abs(
+            differenceDays
+          );
+
+        /*
+         * LANZADO EN LOS ÚLTIMOS 3 DÍAS
+         *
+         * Todavía puede tener pocos ratings.
+         */
+
+        if (
+          ageDays <=
+          3
+        ) {
+          return (
+            hypes >=
+              10 ||
+            ratings >=
+              3
+          );
+        }
+
+        /*
+         * HASTA 7 DÍAS
+         */
+
+        if (
+          ageDays <=
+          7
+        ) {
+          return (
+            hypes >=
+              15 ||
+            ratings >=
+              7
+          );
+        }
+
+        /*
+         * HASTA 14 DÍAS
+         */
+
+        if (
+          ageDays <=
+          14
+        ) {
+          return (
+            hypes >=
+              25 ||
+            ratings >=
+              15
+          );
+        }
+
+        /*
+         * HASTA 30 DÍAS
+         *
+         * Si ya lleva varias semanas,
+         * debe ser claramente relevante
+         * para seguir apareciendo.
+         */
+
+        return (
+          hypes >=
+            40 ||
+          ratings >=
+            30
+        );
+      }
+    )
     .sort(
       (
         first,
         second
       ) => {
-        const firstCount =
+        const firstRelease =
+          first.first_release_date ??
+          0;
+
+        const secondRelease =
+          second.first_release_date ??
+          0;
+
+        const firstHypes =
+          first.hypes ??
+          0;
+
+        const secondHypes =
+          second.hypes ??
+          0;
+
+        const firstRatings =
           first.total_rating_count ??
           0;
 
-        const secondCount =
+        const secondRatings =
           second.total_rating_count ??
           0;
 
+        const firstFuture =
+          firstRelease >
+          now;
+
+        const secondFuture =
+          secondRelease >
+          now;
+
         /*
-         * Principal:
-         * popularidad.
+         * SCORE DE RELEVANCIA
          */
+
+        const firstRelevance =
+          firstHypes *
+            3 +
+          firstRatings;
+
+        const secondRelevance =
+          secondHypes *
+            3 +
+          secondRatings;
+
+        /*
+         * Próximos lanzamientos:
+         *
+         * primero el que sale antes.
+         */
+
         if (
-          firstCount !==
-          secondCount
+          firstFuture &&
+          secondFuture
         ) {
+          const dateDifference =
+            firstRelease -
+            secondRelease;
+
+          if (
+            dateDifference !==
+            0
+          ) {
+            return dateDifference;
+          }
+
           return (
-            secondCount -
-            firstCount
+            secondRelevance -
+            firstRelevance
           );
         }
 
         /*
-         * Empate:
-         * el más reciente primero.
+         * Lanzamientos ya disponibles:
+         *
+         * primero el más reciente.
          */
+
+        if (
+          !firstFuture &&
+          !secondFuture
+        ) {
+          const dateDifference =
+            secondRelease -
+            firstRelease;
+
+          if (
+            dateDifference !==
+            0
+          ) {
+            return dateDifference;
+          }
+
+          return (
+            secondRelevance -
+            firstRelevance
+          );
+        }
+
+        /*
+         * Para mezclar recién salidos y
+         * próximos lanzamientos usamos la
+         * distancia respecto de hoy.
+         *
+         * Así un juego que salió ayer puede
+         * competir con uno que sale mañana.
+         */
+
+        const firstDistance =
+          Math.abs(
+            firstRelease -
+            now
+          );
+
+        const secondDistance =
+          Math.abs(
+            secondRelease -
+            now
+          );
+
+        if (
+          firstDistance !==
+          secondDistance
+        ) {
+          return (
+            firstDistance -
+            secondDistance
+          );
+        }
+
         return (
-          (
-            second.first_release_date ??
-            0
-          ) -
-          (
-            first.first_release_date ??
-            0
-          )
+          secondRelevance -
+          firstRelevance
         );
       }
     )
     .slice(
       0,
-      12
+      20
     );
 }
 
@@ -735,7 +986,8 @@ export async function getIGDBGame(
           game_type.type,
           version_parent,
           total_rating,
-          total_rating_count;
+          total_rating_count,
+          hypes;
 
         where id = ${id};
 
@@ -744,7 +996,9 @@ export async function getIGDBGame(
     );
 
   return (
-    games[0] ??
+    games[
+      0
+    ] ??
     null
   );
 }
@@ -764,7 +1018,9 @@ export function getIGDBImageUrl(
     | "1080p" =
       "cover_big"
 ) {
-  if (!imageId) {
+  if (
+    !imageId
+  ) {
     return null;
   }
 
@@ -787,12 +1043,6 @@ function getLandscapeScore(
     image.height ??
     0;
 
-  /*
-   * Si IGDB no trae dimensiones,
-   * permitimos la imagen pero con
-   * prioridad mínima.
-   */
-
   if (
     width <=
       0 ||
@@ -805,11 +1055,6 @@ function getLandscapeScore(
   const ratio =
     width /
     height;
-
-  /*
-   * Rechazamos imágenes que sean
-   * demasiado verticales/cuadradas.
-   */
 
   if (
     ratio <
@@ -835,10 +1080,6 @@ function getLandscapeScore(
         ratioDifference *
           0.3
     );
-
-  /*
-   * Resolución × proximidad a 16:9.
-   */
 
   return (
     width *
@@ -888,7 +1129,9 @@ function getBestLandscapeImage(
         ) =>
           second.score -
           first.score
-      )[0]
+      )[
+        0
+      ]
       ?.image ??
     null
   );
@@ -902,24 +1145,14 @@ export function getIGDBBackdropUrl(
   game:
     IGDBGame
 ) {
-  /*
-   * PRIORIDAD
-   *
-   * 1. Artwork oficial horizontal
-   * 2. Screenshot horizontal
-   * 3. Nada
-   *
-   * No convertimos una portada vertical
-   * en backdrop.
-   */
-
   const artwork =
     getBestLandscapeImage(
       game.artworks
     );
 
   if (
-    artwork?.image_id
+    artwork
+      ?.image_id
   ) {
     return getIGDBImageUrl(
       artwork.image_id,
@@ -933,7 +1166,8 @@ export function getIGDBBackdropUrl(
     );
 
   if (
-    screenshot?.image_id
+    screenshot
+      ?.image_id
   ) {
     return getIGDBImageUrl(
       screenshot.image_id,
@@ -953,7 +1187,9 @@ export function getIGDBReleaseYear(
     | number
     | undefined
 ) {
-  if (!timestamp) {
+  if (
+    !timestamp
+  ) {
     return null;
   }
 

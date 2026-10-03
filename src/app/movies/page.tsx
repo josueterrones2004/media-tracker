@@ -235,6 +235,21 @@ export default async function MoviesPage() {
                     override
                       ?.poster_url ??
                     review.cover_url,
+
+                  cover_position_x:
+                    override
+                      ?.poster_position_x ??
+                    50,
+
+                  cover_position_y:
+                    override
+                      ?.poster_position_y ??
+                    50,
+
+                  cover_zoom:
+                    override
+                      ?.poster_zoom ??
+                    1,
                 };
 
                 return (
@@ -339,7 +354,8 @@ function MovieCover({
   coverUrl,
   artwork,
 }: {
-  title: string;
+  title:
+    string;
 
   coverUrl:
     | string
@@ -359,8 +375,12 @@ function MovieCover({
           alt={
             title
           }
-          width={500}
-          height={750}
+          width={
+            500
+          }
+          height={
+            750
+          }
           unoptimized={
             shouldUseOriginalImage(
               coverUrl

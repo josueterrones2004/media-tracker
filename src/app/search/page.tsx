@@ -16,6 +16,13 @@ import {
 } from "@/lib/image-optimization";
 
 import {
+  getMediaArtworkMapKey,
+  getMixedMediaArtworkOverrides,
+  type DatabaseMediaType,
+  type MediaArtworkOverride,
+} from "@/lib/media-artwork";
+
+import {
   normalizeSearchText,
   searchAllMedia,
   type SearchKind,
@@ -38,23 +45,55 @@ const DEFAULT_LIMIT =
 const MAX_LIMIT =
   60;
 
+function toDatabaseMediaType(
+  kind:
+    SearchKind
+): DatabaseMediaType {
+  if (
+    kind ===
+    "movie"
+  ) {
+    return "MOVIE";
+  }
+
+  if (
+    kind ===
+    "series"
+  ) {
+    return "SERIES";
+  }
+
+  if (
+    kind ===
+    "game"
+  ) {
+    return "GAME";
+  }
+
+  return "BOOK";
+}
+
 function getKindLabel(
-  kind: SearchKind
+  kind:
+    SearchKind
 ) {
   if (
-    kind === "game"
+    kind ===
+    "game"
   ) {
     return "Juego";
   }
 
   if (
-    kind === "movie"
+    kind ===
+    "movie"
   ) {
     return "Película";
   }
 
   if (
-    kind === "series"
+    kind ===
+    "series"
   ) {
     return "Serie";
   }
@@ -374,7 +413,7 @@ export default async function SearchPage({
   const requestedLimit =
     Number(
       params.limit ??
-      DEFAULT_LIMIT
+        DEFAULT_LIMIT
     );
 
   const limit =
@@ -397,6 +436,27 @@ export default async function SearchPage({
   const allResults =
     await searchAllMedia(
       query
+    );
+
+  /*
+   * GLOBAL ARTWORK OVERRIDES
+   */
+
+  const artworkOverrides =
+    await getMixedMediaArtworkOverrides(
+      allResults.map(
+        (
+          result
+        ) => ({
+          media_type:
+            toDatabaseMediaType(
+              result.kind
+            ),
+
+          external_id:
+            result.externalId,
+        })
+      )
     );
 
   /*
@@ -466,10 +526,23 @@ export default async function SearchPage({
       filteredResults.filter(
         (
           result
-        ) =>
-          Boolean(
-            result.image
-          )
+        ) => {
+          const override =
+            artworkOverrides.get(
+              getMediaArtworkMapKey(
+                toDatabaseMediaType(
+                  result.kind
+                ),
+                result.externalId
+              )
+            );
+
+          return Boolean(
+            override
+              ?.poster_url ??
+              result.image
+          );
+        }
       );
   }
 
@@ -561,19 +634,35 @@ export default async function SearchPage({
                 {visibleResults.map(
                   (
                     result
-                  ) => (
-                    <ResultRow
-                      key={
-                        result.key
-                      }
-                      result={
-                        result
-                      }
-                      query={
-                        query
-                      }
-                    />
-                  )
+                  ) => {
+                    const artworkOverride =
+                      artworkOverrides.get(
+                        getMediaArtworkMapKey(
+                          toDatabaseMediaType(
+                            result.kind
+                          ),
+                          result.externalId
+                        )
+                      ) ??
+                      null;
+
+                    return (
+                      <ResultRow
+                        key={
+                          result.key
+                        }
+                        result={
+                          result
+                        }
+                        query={
+                          query
+                        }
+                        artworkOverride={
+                          artworkOverride
+                        }
+                      />
+                    );
+                  }
                 )}
               </div>
 
@@ -630,12 +719,17 @@ export default async function SearchPage({
 function ResultRow({
   result,
   query,
+  artworkOverride,
 }: {
   result:
     UnifiedSearchResult;
 
   query:
     string;
+
+  artworkOverride:
+    | MediaArtworkOverride
+    | null;
 }) {
   const alias =
     getUsefulAlias(
@@ -653,6 +747,9 @@ function ResultRow({
       <ResultCover
         result={
           result
+        }
+        artworkOverride={
+          artworkOverride
         }
       />
 
@@ -724,16 +821,41 @@ function ResultRow({
 
 function ResultCover({
   result,
+  artworkOverride,
 }: {
   result:
     UnifiedSearchResult;
+
+  artworkOverride:
+    | MediaArtworkOverride
+    | null;
 }) {
+  const image =
+    artworkOverride
+      ?.poster_url ??
+    result.image;
+
+  const positionX =
+    artworkOverride
+      ?.poster_position_x ??
+    50;
+
+  const positionY =
+    artworkOverride
+      ?.poster_position_y ??
+    50;
+
+  const zoom =
+    artworkOverride
+      ?.poster_zoom ??
+    1;
+
   return (
     <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-md bg-zinc-900 sm:h-[108px] sm:w-[72px]">
-      {result.image ? (
+      {image ? (
         <Image
           src={
-            result.image
+            image
           }
           alt={
             result.title
@@ -742,10 +864,16 @@ function ResultCover({
           sizes="72px"
           unoptimized={
             shouldUseOriginalImage(
-              result.image
+              image
             )
           }
           className="object-cover"
+          style={{
+            objectPosition:
+              `${positionX}% ${positionY}%`,
+            transform:
+              `scale(${zoom})`,
+          }}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-2 text-center text-zinc-700">

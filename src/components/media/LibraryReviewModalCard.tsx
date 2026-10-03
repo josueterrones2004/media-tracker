@@ -18,8 +18,14 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
-import { useRouter } from "next/navigation";
-import { type ReactNode, useState } from "react";
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  type ReactNode,
+  useState,
+} from "react";
 
 import StarRating from "@/components/media/StarRating";
 
@@ -38,98 +44,186 @@ type MediaType =
 
 export type LibraryReview = {
   id: string;
+
   external_id: string;
+
   title: string;
 
-  cover_url: string | null;
-  release_year: number | null;
+  cover_url:
+    | string
+    | null;
 
-  rating: number | null;
+  cover_position_x?:
+    number;
+
+  cover_position_y?:
+    number;
+
+  cover_zoom?:
+    number;
+
+  release_year:
+    | number
+    | null;
+
+  rating:
+    | number
+    | null;
 
   liked: boolean;
+
   is_rewatch: boolean;
-  contains_spoilers: boolean;
+
+  contains_spoilers:
+    boolean;
 
   consumed_at: string;
 
-  review_text: string | null;
+  review_text:
+    | string
+    | null;
 };
 
 export default function LibraryReviewModalCard({
   review,
   mediaType,
 }: {
-  review: LibraryReview;
-  mediaType: MediaType;
+  review:
+    LibraryReview;
+
+  mediaType:
+    MediaType;
 }) {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const [supabase] = useState(
-    () => createClient()
-  );
+  const [
+    supabase,
+  ] =
+    useState(
+      () =>
+        createClient()
+    );
 
-  const [open, setOpen] =
-    useState(false);
+  const [
+    open,
+    setOpen,
+  ] =
+    useState(
+      false
+    );
 
-  const [editing, setEditing] =
-    useState(false);
+  const [
+    editing,
+    setEditing,
+  ] =
+    useState(
+      false
+    );
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      false
+    );
 
   const [
     confirmDelete,
     setConfirmDelete,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] =
+    useState(
+      ""
+    );
 
   const [
     reviewText,
     setReviewText,
-  ] = useState(
-    review.review_text ?? ""
-  );
+  ] =
+    useState(
+      review.review_text ??
+        ""
+    );
 
-  const [rating, setRating] =
-    useState<number | null>(
+  const [
+    rating,
+    setRating,
+  ] =
+    useState<
+      number |
+      null
+    >(
       review.rating
     );
 
-  const [liked, setLiked] =
-    useState(review.liked);
+  const [
+    liked,
+    setLiked,
+  ] =
+    useState(
+      review.liked
+    );
 
   const [
     isRepeat,
     setIsRepeat,
-  ] = useState(
-    review.is_rewatch
-  );
+  ] =
+    useState(
+      review.is_rewatch
+    );
 
   const [
     containsSpoilers,
     setContainsSpoilers,
-  ] = useState(
-    review.contains_spoilers
-  );
+  ] =
+    useState(
+      review.contains_spoilers
+    );
 
   const [
     spoilersRevealed,
     setSpoilersRevealed,
-  ] = useState(
-    !review.contains_spoilers
-  );
+  ] =
+    useState(
+      !review.contains_spoilers
+    );
+
+  const coverPositionX =
+    review.cover_position_x ??
+    50;
+
+  const coverPositionY =
+    review.cover_position_y ??
+    50;
+
+  const coverZoom =
+    review.cover_zoom ??
+    1;
 
   function formatDate(
-    date: string
+    date:
+      string
   ) {
     return new Intl.DateTimeFormat(
       "es-MX",
       {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
+        day:
+          "2-digit",
+
+        month:
+          "short",
+
+        year:
+          "numeric",
       }
     ).format(
       new Date(
@@ -140,13 +234,15 @@ export default function LibraryReviewModalCard({
 
   function getRoute() {
     if (
-      mediaType === "SERIES"
+      mediaType ===
+      "SERIES"
     ) {
       return `/series/${review.external_id}`;
     }
 
     if (
-      mediaType === "BOOK"
+      mediaType ===
+      "BOOK"
     ) {
       return `/books/${review.external_id}`;
     }
@@ -156,13 +252,15 @@ export default function LibraryReviewModalCard({
 
   function getDateLabel() {
     if (
-      mediaType === "BOOK"
+      mediaType ===
+      "BOOK"
     ) {
       return "Leído el";
     }
 
     if (
-      mediaType === "GAME"
+      mediaType ===
+      "GAME"
     ) {
       return "Completado el";
     }
@@ -172,7 +270,8 @@ export default function LibraryReviewModalCard({
 
   function getRepeatLabel() {
     if (
-      mediaType === "BOOK"
+      mediaType ===
+      "BOOK"
     ) {
       return isRepeat
         ? "Relectura"
@@ -180,7 +279,8 @@ export default function LibraryReviewModalCard({
     }
 
     if (
-      mediaType === "GAME"
+      mediaType ===
+      "GAME"
     ) {
       return isRepeat
         ? "Replay"
@@ -193,44 +293,70 @@ export default function LibraryReviewModalCard({
   }
 
   function getRepeatIcon() {
-    if (isRepeat) {
+    if (
+      isRepeat
+    ) {
       return (
-        <Repeat2 size={30} />
+        <Repeat2
+          size={
+            30
+          }
+        />
       );
     }
 
     if (
-      mediaType === "BOOK"
+      mediaType ===
+      "BOOK"
     ) {
       return (
-        <BookOpen size={30} />
+        <BookOpen
+          size={
+            30
+          }
+        />
       );
     }
 
     if (
-      mediaType === "GAME"
+      mediaType ===
+      "GAME"
     ) {
       return (
-        <Gamepad2 size={30} />
+        <Gamepad2
+          size={
+            30
+          }
+        />
       );
     }
 
-    return <Eye size={30} />;
+    return (
+      <Eye
+        size={
+          30
+        }
+      />
+    );
   }
 
   function getExperience() {
-    if (!isRepeat) {
+    if (
+      !isRepeat
+    ) {
       return "FIRST_TIME";
     }
 
     if (
-      mediaType === "BOOK"
+      mediaType ===
+      "BOOK"
     ) {
       return "REREAD";
     }
 
     if (
-      mediaType === "GAME"
+      mediaType ===
+      "GAME"
     ) {
       return "REPLAY";
     }
@@ -240,7 +366,8 @@ export default function LibraryReviewModalCard({
 
   function resetValues() {
     setReviewText(
-      review.review_text ?? ""
+      review.review_text ??
+        ""
     );
 
     setRating(
@@ -263,48 +390,85 @@ export default function LibraryReviewModalCard({
   function openModal() {
     resetValues();
 
-    setEditing(false);
-    setConfirmDelete(false);
-    setMessage("");
+    setEditing(
+      false
+    );
+
+    setConfirmDelete(
+      false
+    );
+
+    setMessage(
+      ""
+    );
 
     setSpoilersRevealed(
       !review.contains_spoilers
     );
 
-    setOpen(true);
+    setOpen(
+      true
+    );
   }
 
   function closeModal() {
-    if (loading) {
+    if (
+      loading
+    ) {
       return;
     }
 
-    setOpen(false);
-    setEditing(false);
-    setConfirmDelete(false);
-    setMessage("");
+    setOpen(
+      false
+    );
+
+    setEditing(
+      false
+    );
+
+    setConfirmDelete(
+      false
+    );
+
+    setMessage(
+      ""
+    );
   }
 
   function cancelEditing() {
     resetValues();
 
-    setEditing(false);
-    setMessage("");
+    setEditing(
+      false
+    );
+
+    setMessage(
+      ""
+    );
   }
 
   async function saveChanges() {
-    if (loading) {
+    if (
+      loading
+    ) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true
+    );
+
+    setMessage(
+      ""
+    );
 
     const {
       error,
     } =
       await supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .update({
           review_text:
             reviewText.trim() ||
@@ -324,24 +488,31 @@ export default function LibraryReviewModalCard({
             getExperience(),
 
           updated_at:
-            new Date().toISOString(),
+            new Date()
+              .toISOString(),
         })
         .eq(
           "id",
           review.id
         );
 
-    if (error) {
+    if (
+      error
+    ) {
       setMessage(
         error.message
       );
 
-      setLoading(false);
+      setLoading(
+        false
+      );
 
       return;
     }
 
-    setEditing(false);
+    setEditing(
+      false
+    );
 
     setSpoilersRevealed(
       !containsSpoilers
@@ -351,44 +522,70 @@ export default function LibraryReviewModalCard({
       "Review actualizada."
     );
 
-    setLoading(false);
+    setLoading(
+      false
+    );
 
     router.refresh();
   }
 
   async function deleteReview() {
-    if (loading) {
+    if (
+      loading
+    ) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true
+    );
+
+    setMessage(
+      ""
+    );
 
     const {
       error,
     } =
       await supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .delete()
         .eq(
           "id",
           review.id
         );
 
-    if (error) {
+    if (
+      error
+    ) {
       setMessage(
         error.message
       );
 
-      setLoading(false);
-      setConfirmDelete(false);
+      setLoading(
+        false
+      );
+
+      setConfirmDelete(
+        false
+      );
 
       return;
     }
 
-    setConfirmDelete(false);
-    setOpen(false);
-    setLoading(false);
+    setConfirmDelete(
+      false
+    );
+
+    setOpen(
+      false
+    );
+
+    setLoading(
+      false
+    );
 
     router.refresh();
   }
@@ -396,14 +593,17 @@ export default function LibraryReviewModalCard({
   const hasText =
     reviewText
       .trim()
-      .length > 0;
+      .length >
+    0;
 
   return (
     <>
       <div>
         <button
           type="button"
-          onClick={openModal}
+          onClick={
+            openModal
+          }
           className="block w-full text-left"
         >
           <ReviewCover
@@ -413,55 +613,88 @@ export default function LibraryReviewModalCard({
             coverUrl={
               review.cover_url
             }
+            positionX={
+              coverPositionX
+            }
+            positionY={
+              coverPositionY
+            }
+            zoom={
+              coverZoom
+            }
           />
         </button>
 
         <div className="mt-2">
           <StarRating
-            value={rating}
+            value={
+              rating
+            }
             readonly
-            size={17}
-            showLabel={false}
+            size={
+              17
+            }
+            showLabel={
+              false
+            }
           />
 
           <div className="mt-2 flex items-center gap-3 text-zinc-500">
             {liked ? (
               <Heart
-                size={17}
+                size={
+                  17
+                }
                 fill="currentColor"
                 className="text-red-500"
               />
             ) : (
               <HeartCrack
-                size={17}
+                size={
+                  17
+                }
               />
             )}
 
             {isRepeat ? (
               <Repeat2
-                size={17}
+                size={
+                  17
+                }
               />
             ) : mediaType ===
               "BOOK" ? (
               <BookOpen
-                size={17}
+                size={
+                  17
+                }
               />
             ) : mediaType ===
               "GAME" ? (
               <Gamepad2
-                size={17}
+                size={
+                  17
+                }
               />
             ) : (
-              <Eye size={17} />
+              <Eye
+                size={
+                  17
+                }
+              />
             )}
 
             {containsSpoilers ? (
               <ShieldAlert
-                size={17}
+                size={
+                  17
+                }
               />
             ) : (
               <ShieldCheck
-                size={17}
+                size={
+                  17
+                }
               />
             )}
           </div>
@@ -494,16 +727,24 @@ export default function LibraryReviewModalCard({
               className="absolute right-5 top-5 text-zinc-500 transition hover:text-white disabled:opacity-50"
               aria-label="Cerrar"
             >
-              <X size={26} />
+              <X
+                size={
+                  26
+                }
+              />
             </button>
 
             <div className="grid gap-8 md:grid-cols-[170px_1fr] md:items-start">
               <div className="flex justify-center md:pt-12">
                 <div className="w-full max-w-[150px]">
                   <Link
-                    href={getRoute()}
+                    href={
+                      getRoute()
+                    }
                     onClick={() =>
-                      setOpen(false)
+                      setOpen(
+                        false
+                      )
                     }
                   >
                     <ReviewCover
@@ -513,6 +754,15 @@ export default function LibraryReviewModalCard({
                       coverUrl={
                         review.cover_url
                       }
+                      positionX={
+                        coverPositionX
+                      }
+                      positionY={
+                        coverPositionY
+                      }
+                      zoom={
+                        coverZoom
+                      }
                     />
                   </Link>
                 </div>
@@ -521,7 +771,9 @@ export default function LibraryReviewModalCard({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-baseline gap-3 pr-10">
                   <h2 className="text-2xl font-bold">
-                    {review.title}
+                    {
+                      review.title
+                    }
                   </h2>
 
                   {review.release_year && (
@@ -548,7 +800,9 @@ export default function LibraryReviewModalCard({
                   </p>
 
                   <StarRating
-                    value={rating}
+                    value={
+                      rating
+                    }
                     onChange={
                       editing
                         ? setRating
@@ -557,8 +811,12 @@ export default function LibraryReviewModalCard({
                     readonly={
                       !editing
                     }
-                    size={32}
-                    showLabel={false}
+                    size={
+                      32
+                    }
+                    showLabel={
+                      false
+                    }
                   />
                 </div>
 
@@ -567,7 +825,9 @@ export default function LibraryReviewModalCard({
                     editing={
                       editing
                     }
-                    active={liked}
+                    active={
+                      liked
+                    }
                     onClick={() =>
                       setLiked(
                         !liked
@@ -576,12 +836,16 @@ export default function LibraryReviewModalCard({
                     icon={
                       liked ? (
                         <Heart
-                          size={30}
+                          size={
+                            30
+                          }
                           fill="currentColor"
                         />
                       ) : (
                         <HeartCrack
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       )
                     }
@@ -627,11 +891,15 @@ export default function LibraryReviewModalCard({
                     icon={
                       containsSpoilers ? (
                         <ShieldAlert
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       ) : (
                         <ShieldCheck
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       )
                     }
@@ -657,7 +925,9 @@ export default function LibraryReviewModalCard({
                         )
                       }
                       placeholder="Escribe tu review..."
-                      rows={6}
+                      rows={
+                        6
+                      }
                       className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 leading-7 text-zinc-200 outline-none transition focus:border-fuchsia-500"
                     />
                   ) : hasText &&
@@ -665,7 +935,9 @@ export default function LibraryReviewModalCard({
                     !spoilersRevealed ? (
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center">
                       <ShieldAlert
-                        size={32}
+                        size={
+                          32
+                        }
                         className="mx-auto text-zinc-400"
                       />
 
@@ -706,7 +978,9 @@ export default function LibraryReviewModalCard({
 
                 {message && (
                   <p className="mt-4 text-sm text-zinc-400">
-                    {message}
+                    {
+                      message
+                    }
                   </p>
                 )}
 
@@ -724,7 +998,9 @@ export default function LibraryReviewModalCard({
                     className="flex items-center gap-2 rounded-xl border border-red-900/50 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-950/30 disabled:opacity-50"
                   >
                     <Trash2
-                      size={17}
+                      size={
+                        17
+                      }
                     />
 
                     Borrar
@@ -745,7 +1021,9 @@ export default function LibraryReviewModalCard({
                         className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
                       >
                         <Pencil
-                          size={17}
+                          size={
+                            17
+                          }
                         />
 
                         Editar
@@ -776,7 +1054,9 @@ export default function LibraryReviewModalCard({
                           className="flex items-center gap-2 rounded-xl bg-fuchsia-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
                         >
                           <Save
-                            size={17}
+                            size={
+                              17
+                            }
                           />
 
                           {loading
@@ -798,7 +1078,9 @@ export default function LibraryReviewModalCard({
           <div
             className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
             onMouseDown={() => {
-              if (!loading) {
+              if (
+                !loading
+              ) {
                 setConfirmDelete(
                   false
                 );
@@ -815,7 +1097,9 @@ export default function LibraryReviewModalCard({
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500/10 text-red-400">
                 <Trash2
-                  size={21}
+                  size={
+                    21
+                  }
                 />
               </div>
 
@@ -826,7 +1110,9 @@ export default function LibraryReviewModalCard({
               <p className="mt-2 text-sm leading-6 text-zinc-500">
                 La review de{" "}
                 <span className="font-medium text-zinc-300">
-                  {review.title}
+                  {
+                    review.title
+                  }
                 </span>{" "}
                 se eliminará permanentemente. Esta acción no se puede deshacer.
               </p>
@@ -858,7 +1144,9 @@ export default function LibraryReviewModalCard({
                   className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
                 >
                   <Trash2
-                    size={16}
+                    size={
+                      16
+                    }
                   />
 
                   {loading
@@ -880,17 +1168,30 @@ function ReviewToggle({
   icon,
   label,
 }: {
-  editing: boolean;
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  label: string;
+  editing:
+    boolean;
+
+  active:
+    boolean;
+
+  onClick:
+    () => void;
+
+  icon:
+    ReactNode;
+
+  label:
+    string;
 }) {
   return (
     <button
       type="button"
-      disabled={!editing}
-      onClick={onClick}
+      disabled={
+        !editing
+      }
+      onClick={
+        onClick
+      }
       className={`flex min-w-[90px] flex-col items-center gap-2 text-center transition ${
         editing
           ? "cursor-pointer"
@@ -901,10 +1202,14 @@ function ReviewToggle({
           : "text-zinc-500"
       }`}
     >
-      {icon}
+      {
+        icon
+      }
 
       <span className="text-xs">
-        {label}
+        {
+          label
+        }
       </span>
     </button>
   );
@@ -913,27 +1218,54 @@ function ReviewToggle({
 function ReviewCover({
   title,
   coverUrl,
+  positionX,
+  positionY,
+  zoom,
 }: {
-  title: string;
-  coverUrl: string | null;
+  title:
+    string;
+
+  coverUrl:
+    | string
+    | null;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition hover:border-zinc-400">
+    <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition hover:border-zinc-400">
       {coverUrl ? (
         <Image
-          src={coverUrl}
-          alt={title}
-          width={500}
-          height={750}
+          src={
+            coverUrl
+          }
+          alt={
+            title
+          }
+          fill
+          sizes="(max-width: 768px) 40vw, 150px"
           unoptimized={
             shouldUseOriginalImage(
               coverUrl
             )
           }
-          className="aspect-[2/3] w-full object-cover"
+          className="object-cover"
+          style={{
+            objectPosition:
+              `${positionX}% ${positionY}%`,
+
+            transform:
+              `scale(${zoom})`,
+          }}
         />
       ) : (
-        <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
+        <div className="flex h-full w-full items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
           Sin imagen
         </div>
       )}

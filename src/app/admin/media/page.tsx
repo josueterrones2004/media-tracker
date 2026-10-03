@@ -23,14 +23,18 @@ export default async function AdminMediaPage() {
   } =
     await supabase.auth.getUser();
 
-  if (!user) {
+  if (
+    !user
+  ) {
     redirect(
       "/auth"
     );
   }
 
   const {
-    data: profile,
+    data:
+      profile,
+
     error,
   } =
     await supabase
@@ -57,20 +61,22 @@ export default async function AdminMediaPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] pb-20">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-fuchsia-500/10 text-fuchsia-400">
+    <main className="mx-auto w-full max-w-[1500px] pb-24">
+      <div className="mb-6 flex items-start gap-3 sm:mb-8 sm:items-center">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fuchsia-500/10 text-fuchsia-400 sm:h-11 sm:w-11">
           <ImageIcon
-            size={21}
+            size={
+              20
+            }
           />
         </div>
 
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-100 sm:text-3xl">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-zinc-100 sm:text-3xl">
             Administrar imágenes
           </h1>
 
-          <p className="mt-1 text-sm text-zinc-600">
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-zinc-600 sm:text-sm">
             Corrige banners, portadas y encuadres sin modificar código.
           </p>
         </div>

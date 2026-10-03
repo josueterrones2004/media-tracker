@@ -31,57 +31,19 @@ type Kind =
   | "game"
   | "book";
 
-type DatabaseMediaType =
-  | "MOVIE"
-  | "SERIES"
-  | "GAME"
-  | "BOOK";
-
 type Asset = {
-  url:
-    string;
+  url: string;
 
   type:
     | "poster"
     | "backdrop";
 
-  label:
-    string;
+  label: string;
 
-  width?:
-    number;
+  width?: number;
 
-  height?:
-    number;
+  height?: number;
 };
-
-function toDatabaseMediaType(
-  kind:
-    Kind
-): DatabaseMediaType {
-  if (
-    kind ===
-    "movie"
-  ) {
-    return "MOVIE";
-  }
-
-  if (
-    kind ===
-    "series"
-  ) {
-    return "SERIES";
-  }
-
-  if (
-    kind ===
-    "game"
-  ) {
-    return "GAME";
-  }
-
-  return "BOOK";
-}
 
 export async function GET(
   request:
@@ -177,8 +139,7 @@ export async function GET(
   }
 
   const assets:
-    Asset[] =
-    [];
+    Asset[] = [];
 
   let automaticPoster:
     string |
@@ -203,7 +164,9 @@ export async function GET(
         id
       );
 
-    if (game) {
+    if (
+      game
+    ) {
       automaticPoster =
         getIGDBImageUrl(
           game.cover
@@ -220,26 +183,32 @@ export async function GET(
         game.cover
           ?.image_id
       ) {
-        assets.push({
-          url:
-            getIGDBImageUrl(
-              game.cover
-                .image_id,
-              "cover_big"
-            )!,
+        const url =
+          getIGDBImageUrl(
+            game.cover
+              .image_id,
+            "cover_big"
+          );
 
-          type:
-            "poster",
+        if (
+          url
+        ) {
+          assets.push({
+            url,
 
-          label:
-            "Portada de IGDB",
+            type:
+              "poster",
 
-          width:
-            game.cover.width,
+            label:
+              "Portada de IGDB",
 
-          height:
-            game.cover.height,
-        });
+            width:
+              game.cover.width,
+
+            height:
+              game.cover.height,
+          });
+        }
       }
 
       for (
@@ -247,12 +216,20 @@ export async function GET(
         game.artworks ??
         []
       ) {
+        const url =
+          getIGDBImageUrl(
+            artwork.image_id,
+            "1080p"
+          );
+
+        if (
+          !url
+        ) {
+          continue;
+        }
+
         assets.push({
-          url:
-            getIGDBImageUrl(
-              artwork.image_id,
-              "1080p"
-            )!,
+          url,
 
           type:
             "backdrop",
@@ -273,12 +250,20 @@ export async function GET(
         game.screenshots ??
         []
       ) {
+        const url =
+          getIGDBImageUrl(
+            screenshot.image_id,
+            "1080p"
+          );
+
+        if (
+          !url
+        ) {
+          continue;
+        }
+
         assets.push({
-          url:
-            getIGDBImageUrl(
-              screenshot.image_id,
-              "1080p"
-            )!,
+          url,
 
           type:
             "backdrop",
@@ -512,7 +497,9 @@ export async function GET(
           "L"
         );
 
-      if (!url) {
+      if (
+        !url
+      ) {
         continue;
       }
 
@@ -529,29 +516,23 @@ export async function GET(
   }
 
   /*
-   * REMOVE DUPLICATES
-   */
-
-  const uniqueAssets =
-    Array.from(
-      new Map(
-        assets.map(
-          (
-            asset
-          ) => [
-            asset.url,
-            asset,
-          ]
-        )
-      ).values()
-    );
-
-  /*
-   * OVERRIDE
+   * CURRENT OVERRIDE
+   *
+   * IMPORTANTE:
+   * media_artwork_overrides.media_type usa:
+   *
+   * movie
+   * series
+   * game
+   * book
+   *
+   * No MOVIE / SERIES / etc.
    */
 
   const {
     data: override,
+    error:
+      overrideError,
   } =
     await supabase
       .from(
@@ -569,9 +550,7 @@ export async function GET(
       `)
       .eq(
         "media_type",
-        toDatabaseMediaType(
-          kind
-        )
+        kind
       )
       .eq(
         "external_id",
@@ -579,9 +558,85 @@ export async function GET(
       )
       .maybeSingle();
 
+  if (
+    overrideError
+  ) {
+    console.error(
+      "Error loading current artwork override:",
+      overrideError
+    );
+  }
+
+  /*
+   * Si actualmente hay una imagen personalizada,
+   * la incluimos entre las opciones como "Actual".
+   */
+
+  const currentAssets:
+    Asset[] = [];
+
+  if (
+    override?.backdrop_url
+  ) {
+    currentAssets.push({
+      url:
+        override.backdrop_url,
+
+      type:
+        "backdrop",
+
+      label:
+        "Actual",
+    });
+  }
+
+  if (
+    override?.poster_url
+  ) {
+    currentAssets.push({
+      url:
+        override.poster_url,
+
+      type:
+        "poster",
+
+      label:
+        "Actual",
+    });
+  }
+
+  /*
+   * REMOVE DUPLICATES
+   */
+
+  const uniqueAssets =
+    Array.from(
+      new Map(
+        [
+          ...currentAssets,
+          ...assets,
+        ].map(
+          (
+            asset
+          ) => [
+            asset.url,
+            asset,
+          ]
+        )
+      ).values()
+    );
+
   return NextResponse.json({
     automaticPoster,
     automaticBackdrop,
+
+    currentPoster:
+      override?.poster_url ??
+      automaticPoster,
+
+    currentBackdrop:
+      override?.backdrop_url ??
+      automaticBackdrop,
 
     assets:
       uniqueAssets,

@@ -21,6 +21,10 @@ import {
   searchTMDB,
 } from "@/lib/tmdb";
 
+import {
+  createClient,
+} from "@/lib/supabase/server";
+
 type Source =
   | "games"
   | "screen"
@@ -33,9 +37,11 @@ type SuggestionKind =
   | "book";
 
 type Suggestion = {
-  key: string;
+  key:
+    string;
 
-  title: string;
+  title:
+    string;
 
   kind:
     SuggestionKind;
@@ -62,6 +68,11 @@ type CachedValue = {
   expiresAt:
     number;
 
+  /*
+   * IMPORTANTE:
+   * aquí guardamos el resultado ORIGINAL
+   * de las APIs externas, no el override.
+   */
   results:
     Suggestion[];
 };
@@ -107,6 +118,16 @@ function normalize(
       /\s+/g,
       " "
     );
+}
+
+function getExternalId(
+  suggestion:
+    Suggestion
+) {
+  return suggestion.key
+    .split(":")
+    .slice(1)
+    .join(":");
 }
 
 function titleScore(
@@ -184,6 +205,154 @@ function titleScore(
     words.length
   ) *
     45;
+}
+
+/*
+ * Aplica SIEMPRE el artwork actual después
+ * del cache de TMDB / IGDB / Open Library.
+ *
+ * De esta forma cambiar una portada no obliga
+ * a esperar 5 minutos para que se actualice.
+ */
+
+async function applyArtworkOverrides(
+  results:
+    Suggestion[]
+) {
+  if (
+    results.length ===
+    0
+  ) {
+    return results;
+  }
+
+  const supabase =
+    await createClient();
+
+  const kinds:
+    SuggestionKind[] = [
+      "movie",
+      "series",
+      "game",
+      "book",
+    ];
+
+  const groups =
+    await Promise.all(
+      kinds.map(
+        async (
+          kind
+        ) => {
+          const externalIds =
+            [
+              ...new Set(
+                results
+                  .filter(
+                    (
+                      result
+                    ) =>
+                      result.kind ===
+                      kind
+                  )
+                  .map(
+                    getExternalId
+                  )
+                  .filter(
+                    Boolean
+                  )
+              ),
+            ];
+
+          if (
+            externalIds.length ===
+            0
+          ) {
+            return [];
+          }
+
+          const {
+            data,
+            error,
+          } =
+            await supabase
+              .from(
+                "media_artwork_overrides"
+              )
+              .select(`
+                media_type,
+                external_id,
+                poster_url
+              `)
+              .eq(
+                "media_type",
+                kind
+              )
+              .in(
+                "external_id",
+                externalIds
+              );
+
+          if (
+            error
+          ) {
+            console.error(
+              `Could not load ${kind} artwork overrides:`,
+              error
+            );
+
+            return [];
+          }
+
+          return (
+            data ??
+            []
+          );
+        }
+      )
+    );
+
+  const artwork =
+    new Map<
+      string,
+      string
+    >();
+
+  for (
+    const group of
+    groups
+  ) {
+    for (
+      const override of
+      group
+    ) {
+      if (
+        !override.poster_url
+      ) {
+        continue;
+      }
+
+      artwork.set(
+        `${override.media_type}:${override.external_id}`,
+        override.poster_url
+      );
+    }
+  }
+
+  return results.map(
+    (
+      result
+    ) => ({
+      ...result,
+
+      image:
+        artwork.get(
+          `${result.kind}:${getExternalId(
+            result
+          )}`
+        ) ??
+        result.image,
+    })
+  );
 }
 
 /*
@@ -499,14 +668,6 @@ async function searchBookSuggestions(
       query
     );
 
-  /*
-   * Para autocomplete no necesitamos
-   * 5 libros llamados exactamente
-   * "Fallout".
-   *
-   * Dejamos uno por título.
-   */
-
   const bestByTitle =
     new Map<
       string,
@@ -652,10 +813,18 @@ export async function GET(
     query.length <
       2
   ) {
-    return NextResponse.json({
-      results:
-        [],
-    });
+    return NextResponse.json(
+      {
+        results:
+          [],
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
+      }
+    );
   }
 
   if (
@@ -674,6 +843,11 @@ export async function GET(
       {
         status:
           400,
+
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
       }
     );
   }
@@ -688,34 +862,43 @@ export async function GET(
       cacheKey
     );
 
+  /*
+   * El resultado externo puede estar cacheado,
+   * pero la portada personalizada NO.
+   */
+
   if (
     cached &&
     cached.expiresAt >
       Date.now()
   ) {
+    const results =
+      await applyArtworkOverrides(
+        cached.results
+      );
+
     return NextResponse.json(
       {
-        results:
-          cached.results,
+        results,
       },
       {
         headers: {
           "Cache-Control":
-            "public, max-age=60, stale-while-revalidate=300",
+            "no-store",
         },
       }
     );
   }
 
   try {
-    let results:
+    let rawResults:
       Suggestion[];
 
     if (
       source ===
       "games"
     ) {
-      results =
+      rawResults =
         await searchGames(
           query
         );
@@ -723,16 +906,20 @@ export async function GET(
       source ===
       "screen"
     ) {
-      results =
+      rawResults =
         await searchScreen(
           query
         );
     } else {
-      results =
+      rawResults =
         await searchBookSuggestions(
           query
         );
     }
+
+    /*
+     * Cacheamos solo los datos externos.
+     */
 
     cache.set(
       cacheKey,
@@ -741,9 +928,15 @@ export async function GET(
           Date.now() +
           CACHE_TIME,
 
-        results,
+        results:
+          rawResults,
       }
     );
+
+    const results =
+      await applyArtworkOverrides(
+        rawResults
+      );
 
     return NextResponse.json(
       {
@@ -752,7 +945,7 @@ export async function GET(
       {
         headers: {
           "Cache-Control":
-            "public, max-age=60, stale-while-revalidate=300",
+            "no-store",
         },
       }
     );
@@ -764,14 +957,17 @@ export async function GET(
       error
     );
 
-    /*
-     * Una API caída no debe romper
-     * el autocompletado entero.
-     */
-
-    return NextResponse.json({
-      results:
-        [],
-    });
+    return NextResponse.json(
+      {
+        results:
+          [],
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
+      }
+    );
   }
 }

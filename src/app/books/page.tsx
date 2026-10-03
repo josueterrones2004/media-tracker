@@ -240,15 +240,36 @@ export default async function BooksPage() {
     readBooks.map(
       (
         review
-      ) => ({
-        ...review,
-
-        cover_url:
+      ) => {
+        const override =
           overrides.get(
             review.external_id
-          )?.poster_url ??
-          review.cover_url,
-      })
+          );
+
+        return {
+          ...review,
+
+          cover_url:
+            override
+              ?.poster_url ??
+            review.cover_url,
+
+          cover_position_x:
+            override
+              ?.poster_position_x ??
+            50,
+
+          cover_position_y:
+            override
+              ?.poster_position_y ??
+            50,
+
+          cover_zoom:
+            override
+              ?.poster_zoom ??
+            1,
+        };
+      }
     );
 
   const reading =

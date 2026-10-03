@@ -43,6 +43,15 @@ type Review = {
     | string
     | null;
 
+  cover_position_x?:
+    number;
+
+  cover_position_y?:
+    number;
+
+  cover_zoom?:
+    number;
+
   release_year:
     | number
     | null;
@@ -65,7 +74,8 @@ type Review = {
 export default function ReviewModalCard({
   review,
 }: {
-  review: Review;
+  review:
+    Review;
 }) {
   const router =
     useRouter();
@@ -76,82 +86,122 @@ export default function ReviewModalCard({
   const [
     open,
     setOpen,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
   const [
     editing,
     setEditing,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
   const [
     loading,
     setLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
   const [
     message,
     setMessage,
-  ] = useState("");
+  ] =
+    useState(
+      ""
+    );
 
   const [
     confirmDelete,
     setConfirmDelete,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
   const [
     reviewText,
     setReviewText,
-  ] = useState(
-    review.review_text ??
-      ""
-  );
+  ] =
+    useState(
+      review.review_text ??
+        ""
+    );
 
   const [
     rating,
     setRating,
-  ] = useState<
-    number | null
-  >(
-    review.rating
-  );
+  ] =
+    useState<
+      number |
+      null
+    >(
+      review.rating
+    );
 
   const [
     liked,
     setLiked,
-  ] = useState(
-    review.liked
-  );
+  ] =
+    useState(
+      review.liked
+    );
 
   const [
     isRewatch,
     setIsRewatch,
-  ] = useState(
-    review.is_rewatch
-  );
+  ] =
+    useState(
+      review.is_rewatch
+    );
 
   const [
     containsSpoilers,
     setContainsSpoilers,
-  ] = useState(
-    review.contains_spoilers
-  );
+  ] =
+    useState(
+      review.contains_spoilers
+    );
 
   const [
     spoilersRevealed,
     setSpoilersRevealed,
-  ] = useState(
-    !review.contains_spoilers
-  );
+  ] =
+    useState(
+      !review.contains_spoilers
+    );
+
+  const coverPositionX =
+    review.cover_position_x ??
+    50;
+
+  const coverPositionY =
+    review.cover_position_y ??
+    50;
+
+  const coverZoom =
+    review.cover_zoom ??
+    1;
 
   function formatDate(
-    date: string
+    date:
+      string
   ) {
     return new Intl.DateTimeFormat(
       "es-MX",
       {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
+        day:
+          "2-digit",
+
+        month:
+          "short",
+
+        year:
+          "numeric",
       }
     ).format(
       new Date(
@@ -184,7 +234,9 @@ export default function ReviewModalCard({
   }
 
   function openModal() {
-    setEditing(false);
+    setEditing(
+      false
+    );
 
     resetValues();
 
@@ -192,40 +244,77 @@ export default function ReviewModalCard({
       !review.contains_spoilers
     );
 
-    setConfirmDelete(false);
+    setConfirmDelete(
+      false
+    );
 
-    setMessage("");
+    setMessage(
+      ""
+    );
 
-    setOpen(true);
+    setOpen(
+      true
+    );
   }
 
   function closeModal() {
-    if (loading) {
+    if (
+      loading
+    ) {
       return;
     }
 
-    setOpen(false);
-    setEditing(false);
-    setConfirmDelete(false);
-    setMessage("");
+    setOpen(
+      false
+    );
+
+    setEditing(
+      false
+    );
+
+    setConfirmDelete(
+      false
+    );
+
+    setMessage(
+      ""
+    );
   }
 
   function cancelEditing() {
     resetValues();
 
-    setEditing(false);
-    setMessage("");
+    setEditing(
+      false
+    );
+
+    setMessage(
+      ""
+    );
   }
 
   async function saveChanges() {
-    setLoading(true);
-    setMessage("");
+    if (
+      loading
+    ) {
+      return;
+    }
+
+    setLoading(
+      true
+    );
+
+    setMessage(
+      ""
+    );
 
     const {
       error,
     } =
       await supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .update({
           review_text:
             reviewText.trim() ||
@@ -247,30 +336,39 @@ export default function ReviewModalCard({
               : "FIRST_TIME",
 
           updated_at:
-            new Date().toISOString(),
+            new Date()
+              .toISOString(),
         })
         .eq(
           "id",
           review.id
         );
 
-    if (error) {
+    if (
+      error
+    ) {
       setMessage(
         error.message
       );
 
-      setLoading(false);
+      setLoading(
+        false
+      );
 
       return;
     }
 
-    setEditing(false);
+    setEditing(
+      false
+    );
 
     setSpoilersRevealed(
       !containsSpoilers
     );
 
-    setLoading(false);
+    setLoading(
+      false
+    );
 
     setMessage(
       "Review actualizada."
@@ -280,38 +378,62 @@ export default function ReviewModalCard({
   }
 
   async function deleteReview() {
-    if (loading) {
+    if (
+      loading
+    ) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true
+    );
+
+    setMessage(
+      ""
+    );
 
     const {
       error,
     } =
       await supabase
-        .from("reviews")
+        .from(
+          "reviews"
+        )
         .delete()
         .eq(
           "id",
           review.id
         );
 
-    if (error) {
+    if (
+      error
+    ) {
       setMessage(
         error.message
       );
 
-      setLoading(false);
-      setConfirmDelete(false);
+      setLoading(
+        false
+      );
+
+      setConfirmDelete(
+        false
+      );
 
       return;
     }
 
-    setLoading(false);
-    setConfirmDelete(false);
-    setOpen(false);
+    setLoading(
+      false
+    );
+
+    setConfirmDelete(
+      false
+    );
+
+    setOpen(
+      false
+    );
 
     router.refresh();
   }
@@ -319,7 +441,8 @@ export default function ReviewModalCard({
   const hasText =
     reviewText
       .trim()
-      .length > 0;
+      .length >
+    0;
 
   return (
     <>
@@ -338,6 +461,15 @@ export default function ReviewModalCard({
             coverUrl={
               review.cover_url
             }
+            positionX={
+              coverPositionX
+            }
+            positionY={
+              coverPositionY
+            }
+            zoom={
+              coverZoom
+            }
           />
         </button>
 
@@ -349,7 +481,9 @@ export default function ReviewModalCard({
                 review.rating
               }
               readonly
-              size={16}
+              size={
+                16
+              }
               showLabel={
                 false
               }
@@ -359,33 +493,45 @@ export default function ReviewModalCard({
           <div className="mt-1 flex items-center gap-3 text-zinc-500">
             {review.liked ? (
               <Heart
-                size={17}
+                size={
+                  17
+                }
                 fill="currentColor"
                 className="text-red-500"
               />
             ) : (
               <HeartCrack
-                size={17}
+                size={
+                  17
+                }
               />
             )}
 
             {review.is_rewatch ? (
               <Eye
-                size={17}
+                size={
+                  17
+                }
               />
             ) : (
               <EyeOff
-                size={17}
+                size={
+                  17
+                }
               />
             )}
 
             {review.contains_spoilers ? (
               <ShieldAlert
-                size={17}
+                size={
+                  17
+                }
               />
             ) : (
               <ShieldCheck
-                size={17}
+                size={
+                  17
+                }
               />
             )}
           </div>
@@ -412,56 +558,48 @@ export default function ReviewModalCard({
               onClick={
                 closeModal
               }
-              className="absolute right-5 top-5 text-zinc-500 transition hover:text-white"
+              disabled={
+                loading
+              }
+              className="absolute right-5 top-5 text-zinc-500 transition hover:text-white disabled:opacity-50"
               aria-label="Cerrar"
             >
               <X
-                size={26}
+                size={
+                  26
+                }
               />
             </button>
 
             <div className="grid gap-8 md:grid-cols-[170px_1fr]">
               <div className="flex items-start justify-center md:pt-14">
                 <div className="w-full max-w-[150px]">
-                  {review.cover_url ? (
-                    <Link
-                      href={`/movies/${review.external_id}`}
-                      onClick={() =>
-                        setOpen(
-                          false
-                        )
+                  <Link
+                    href={`/movies/${review.external_id}`}
+                    onClick={() =>
+                      setOpen(
+                        false
+                      )
+                    }
+                  >
+                    <MovieCover
+                      title={
+                        review.title
                       }
-                    >
-                      <Image
-                        src={
-                          review.cover_url
-                        }
-                        alt={
-                          review.title
-                        }
-                        width={500}
-                        height={750}
-                        unoptimized={
-                          shouldUseOriginalImage(
-                            review.cover_url
-                          )
-                        }
-                        className="w-full rounded-xl border border-transparent object-cover shadow-xl transition hover:border-zinc-400"
-                      />
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/movies/${review.external_id}`}
-                      onClick={() =>
-                        setOpen(
-                          false
-                        )
+                      coverUrl={
+                        review.cover_url
                       }
-                      className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-zinc-900 text-zinc-500"
-                    >
-                      Sin imagen
-                    </Link>
-                  )}
+                      positionX={
+                        coverPositionX
+                      }
+                      positionY={
+                        coverPositionY
+                      }
+                      zoom={
+                        coverZoom
+                      }
+                    />
+                  </Link>
                 </div>
               </div>
 
@@ -504,7 +642,9 @@ export default function ReviewModalCard({
                         ? setRating
                         : undefined
                     }
-                    size={32}
+                    size={
+                      32
+                    }
                   />
                 </div>
 
@@ -524,12 +664,16 @@ export default function ReviewModalCard({
                     icon={
                       liked ? (
                         <Heart
-                          size={30}
+                          size={
+                            30
+                          }
                           fill="currentColor"
                         />
                       ) : (
                         <HeartCrack
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       )
                     }
@@ -555,11 +699,15 @@ export default function ReviewModalCard({
                     icon={
                       isRewatch ? (
                         <Eye
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       ) : (
                         <EyeOff
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       )
                     }
@@ -585,11 +733,15 @@ export default function ReviewModalCard({
                     icon={
                       containsSpoilers ? (
                         <ShieldAlert
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       ) : (
                         <ShieldCheck
-                          size={30}
+                          size={
+                            30
+                          }
                         />
                       )
                     }
@@ -615,7 +767,9 @@ export default function ReviewModalCard({
                         )
                       }
                       placeholder="Escribe tu review..."
-                      rows={6}
+                      rows={
+                        6
+                      }
                       className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 leading-7 text-zinc-200 outline-none transition focus:border-fuchsia-500"
                     />
                   ) : hasText &&
@@ -623,7 +777,9 @@ export default function ReviewModalCard({
                     !spoilersRevealed ? (
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center">
                       <ShieldAlert
-                        size={32}
+                        size={
+                          32
+                        }
                         className="mx-auto text-zinc-400"
                       />
 
@@ -684,7 +840,9 @@ export default function ReviewModalCard({
                     className="flex items-center gap-2 rounded-xl border border-red-900/50 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-950/30 disabled:opacity-50"
                   >
                     <Trash2
-                      size={17}
+                      size={
+                        17
+                      }
                     />
 
                     Borrar
@@ -705,7 +863,9 @@ export default function ReviewModalCard({
                         className="flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900 disabled:opacity-50"
                       >
                         <Pencil
-                          size={17}
+                          size={
+                            17
+                          }
                         />
 
                         Editar
@@ -736,7 +896,9 @@ export default function ReviewModalCard({
                           className="flex items-center gap-2 rounded-xl bg-fuchsia-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-fuchsia-400 disabled:opacity-50"
                         >
                           <Save
-                            size={17}
+                            size={
+                              17
+                            }
                           />
 
                           {loading
@@ -752,8 +914,6 @@ export default function ReviewModalCard({
           </div>
         </div>
       )}
-
-      {/* CONFIRMAR BORRADO */}
 
       {open &&
         confirmDelete && (
@@ -779,7 +939,9 @@ export default function ReviewModalCard({
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500/10 text-red-400">
                 <Trash2
-                  size={21}
+                  size={
+                    21
+                  }
                 />
               </div>
 
@@ -824,7 +986,9 @@ export default function ReviewModalCard({
                   className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Trash2
-                    size={16}
+                    size={
+                      16
+                    }
                   />
 
                   {loading
@@ -846,11 +1010,20 @@ function ReviewToggle({
   icon,
   label,
 }: {
-  editing: boolean;
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
+  editing:
+    boolean;
+
+  active:
+    boolean;
+
+  onClick:
+    () => void;
+
+  icon:
+    React.ReactNode;
+
+  label:
+    string;
 }) {
   return (
     <button
@@ -871,10 +1044,14 @@ function ReviewToggle({
           : "text-zinc-500"
       }`}
     >
-      {icon}
+      {
+        icon
+      }
 
       <span className="text-xs">
-        {label}
+        {
+          label
+        }
       </span>
     </button>
   );
@@ -883,15 +1060,28 @@ function ReviewToggle({
 function MovieCover({
   title,
   coverUrl,
+  positionX,
+  positionY,
+  zoom,
 }: {
-  title: string;
+  title:
+    string;
 
   coverUrl:
     | string
     | null;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition-colors duration-200 hover:border-zinc-400">
+    <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-transparent bg-zinc-900 transition-colors duration-200 hover:border-zinc-400">
       {coverUrl ? (
         <Image
           src={
@@ -900,17 +1090,24 @@ function MovieCover({
           alt={
             title
           }
-          className="aspect-[2/3] w-full object-cover"
-          width={500}
-          height={750}
+          fill
+          sizes="(max-width: 768px) 40vw, 150px"
           unoptimized={
             shouldUseOriginalImage(
               coverUrl
             )
           }
+          className="object-cover"
+          style={{
+            objectPosition:
+              `${positionX}% ${positionY}%`,
+
+            transform:
+              `scale(${zoom})`,
+          }}
         />
       ) : (
-        <div className="flex aspect-[2/3] items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
+        <div className="flex h-full w-full items-center justify-center bg-zinc-800 px-4 text-center text-zinc-500">
           Sin imagen
         </div>
       )}

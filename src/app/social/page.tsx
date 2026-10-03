@@ -14,6 +14,11 @@ import {
 } from "@/lib/image-optimization";
 
 import {
+  getMediaArtworkMapKey,
+  getMixedMediaArtworkOverrides,
+} from "@/lib/media-artwork";
+
+import {
   createClient,
 } from "@/lib/supabase/server";
 
@@ -463,22 +468,6 @@ function getMediaLabel(
   return "";
 }
 
-/*
- * EPISODE GROUPING
- *
- * Los eventos vienen ordenados:
- * más reciente -> más antiguo.
- *
- * E10
- * E9
- * E8
- *
- * se convierten en:
- *
- * vio 3 episodios de Cowboy Bebop
- * T1 · E8–E10
- */
-
 function groupActivityEvents(
   activities:
     ActivityEvent[]
@@ -658,11 +647,11 @@ function getEpisodeRange(
       )
       .sort(
         (
-          a,
-          b
+          first,
+          second
         ) =>
-          a -
-          b
+          first -
+          second
       );
 
   if (
@@ -839,6 +828,25 @@ export default async function SocialPage({
       activityRows ??
       []
     ) as ActivityEvent[];
+
+  /*
+   * GLOBAL ARTWORK
+   */
+
+  const artworkOverrides =
+    await getMixedMediaArtworkOverrides(
+      activities.map(
+        (
+          activity
+        ) => ({
+          media_type:
+            activity.media_type,
+
+          external_id:
+            activity.external_id,
+        })
+      )
+    );
 
   const feedItems =
     groupActivityEvents(
@@ -1069,8 +1077,8 @@ export default async function SocialPage({
     >();
 
   for (
-    const like
-    of activityLikes
+    const like of
+    activityLikes
   ) {
     likeCounts.set(
       like.activity_id,
@@ -1268,12 +1276,6 @@ export default async function SocialPage({
             )}
           </div>
         ) : (
-          /*
-           * En escritorio ya NO hay un carrusel
-           * cortado abruptamente.
-           *
-           * Las sugerencias forman una grid real.
-           */
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {users.length ===
             0 ? (
@@ -1360,7 +1362,35 @@ export default async function SocialPage({
                     profile?.username;
 
                   const mediaHref =
-                  `/series/${item.external_id}`;
+                    `/series/${item.external_id}`;
+
+                  const artworkOverride =
+                    artworkOverrides.get(
+                      getMediaArtworkMapKey(
+                        "SERIES",
+                        item.external_id
+                      )
+                    );
+
+                  const cover =
+                    artworkOverride
+                      ?.poster_url ??
+                    item.cover_url;
+
+                  const coverPositionX =
+                    artworkOverride
+                      ?.poster_position_x ??
+                    50;
+
+                  const coverPositionY =
+                    artworkOverride
+                      ?.poster_position_y ??
+                    50;
+
+                  const coverZoom =
+                    artworkOverride
+                      ?.poster_zoom ??
+                    1;
 
                   const primaryActivity =
                     item.activities[
@@ -1433,8 +1463,6 @@ export default async function SocialPage({
                             </Link>
                           </p>
 
-                          {/* SERIES COVER */}
-
                           <div className="mt-4 flex items-center gap-4">
                             <Link
                               href={
@@ -1442,10 +1470,10 @@ export default async function SocialPage({
                               }
                               className="w-[72px] shrink-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
                             >
-                              {item.cover_url ? (
+                              {cover ? (
                                 <Image
                                   src={
-                                    item.cover_url
+                                    cover
                                   }
                                   alt={
                                     item.title
@@ -1458,10 +1486,17 @@ export default async function SocialPage({
                                   }
                                   unoptimized={
                                     shouldUseOriginalImage(
-                                      item.cover_url
+                                      cover
                                     )
                                   }
                                   className="aspect-[2/3] w-full object-cover"
+                                  style={{
+                                    objectPosition:
+                                      `${coverPositionX}% ${coverPositionY}%`,
+
+                                    transform:
+                                      `scale(${coverZoom})`,
+                                  }}
                                 />
                               ) : (
                                 <div className="flex aspect-[2/3] items-center justify-center px-2 text-center text-[10px] text-zinc-600">
@@ -1543,6 +1578,34 @@ export default async function SocialPage({
                     activity.media_type,
                     activity.external_id
                   );
+
+                const artworkOverride =
+                  artworkOverrides.get(
+                    getMediaArtworkMapKey(
+                      activity.media_type,
+                      activity.external_id
+                    )
+                  );
+
+                const cover =
+                  artworkOverride
+                    ?.poster_url ??
+                  activity.cover_url;
+
+                const coverPositionX =
+                  artworkOverride
+                    ?.poster_position_x ??
+                  50;
+
+                const coverPositionY =
+                  artworkOverride
+                    ?.poster_position_y ??
+                  50;
+
+                const coverZoom =
+                  artworkOverride
+                    ?.poster_zoom ??
+                  1;
 
                 const isEpisode =
                   activity.activity_type ===
@@ -1632,16 +1695,31 @@ export default async function SocialPage({
 
                         {review ? (
                           <SocialReviewModal
-                            review={
-                              review
-                            }
+                            review={{
+                              ...review,
+
+                              cover_url:
+                                artworkOverride
+                                  ?.poster_url ??
+                                review.cover_url,
+
+                              poster_position_x:
+                                artworkOverride
+                                  ?.poster_position_x ??
+                                50,
+
+                              poster_position_y:
+                                artworkOverride
+                                  ?.poster_position_y ??
+                                50,
+
+                              poster_zoom:
+                                artworkOverride
+                                  ?.poster_zoom ??
+                                1,
+                            }}
                           />
                         ) : isEpisode ? (
-                          /*
-                           * Single episode.
-                           *
-                           * It also gets the SERIES COVER.
-                           */
                           <div className="mt-4 flex items-center gap-4">
                             {mediaHref ? (
                               <Link
@@ -1650,10 +1728,10 @@ export default async function SocialPage({
                                 }
                                 className="w-[72px] shrink-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
                               >
-                                {activity.cover_url ? (
+                                {cover ? (
                                   <Image
                                     src={
-                                      activity.cover_url
+                                      cover
                                     }
                                     alt={
                                       activity.title
@@ -1666,10 +1744,17 @@ export default async function SocialPage({
                                     }
                                     unoptimized={
                                       shouldUseOriginalImage(
-                                        activity.cover_url
+                                        cover
                                       )
                                     }
                                     className="aspect-[2/3] w-full object-cover"
+                                    style={{
+                                      objectPosition:
+                                        `${coverPositionX}% ${coverPositionY}%`,
+
+                                      transform:
+                                        `scale(${coverZoom})`,
+                                    }}
                                   />
                                 ) : (
                                   <div className="flex aspect-[2/3] items-center justify-center px-2 text-center text-[10px] text-zinc-600">
@@ -1720,7 +1805,7 @@ export default async function SocialPage({
                           </div>
                         ) : (
                           <div className="mt-4 flex gap-4">
-                            {activity.cover_url ? (
+                            {cover ? (
                               mediaHref ? (
                                 <Link
                                   href={
@@ -1730,7 +1815,7 @@ export default async function SocialPage({
                                 >
                                   <Image
                                     src={
-                                      activity.cover_url
+                                      cover
                                     }
                                     alt={
                                       activity.title
@@ -1743,33 +1828,49 @@ export default async function SocialPage({
                                     }
                                     unoptimized={
                                       shouldUseOriginalImage(
-                                        activity.cover_url
+                                        cover
                                       )
                                     }
                                     className="aspect-[2/3] w-full object-cover"
+                                    style={{
+                                      objectPosition:
+                                        `${coverPositionX}% ${coverPositionY}%`,
+
+                                      transform:
+                                        `scale(${coverZoom})`,
+                                    }}
                                   />
                                 </Link>
                               ) : (
-                                <Image
-                                  src={
-                                    activity.cover_url
-                                  }
-                                  alt={
-                                    activity.title
-                                  }
-                                  width={
-                                    500
-                                  }
-                                  height={
-                                    750
-                                  }
-                                  unoptimized={
-                                    shouldUseOriginalImage(
-                                      activity.cover_url
-                                    )
-                                  }
-                                  className="aspect-[2/3] w-16 shrink-0 rounded-lg object-cover"
-                                />
+                                <div className="w-16 shrink-0 overflow-hidden rounded-lg">
+                                  <Image
+                                    src={
+                                      cover
+                                    }
+                                    alt={
+                                      activity.title
+                                    }
+                                    width={
+                                      500
+                                    }
+                                    height={
+                                      750
+                                    }
+                                    unoptimized={
+                                      shouldUseOriginalImage(
+                                        cover
+                                      )
+                                    }
+                                    className="aspect-[2/3] w-full object-cover"
+                                    style={{
+                                      objectPosition:
+                                        `${coverPositionX}% ${coverPositionY}%`,
+
+                                      transform:
+                                        `scale(${coverZoom})`,
+                                    }}
+                                  />
+                                </div>
                               )
                             ) : (
                               <div className="flex aspect-[2/3] w-16 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 px-2 text-center text-[10px] text-zinc-600">
@@ -1997,58 +2098,50 @@ function PersonSuggestion({
     );
 
   const profileHref =
-  profile.username
-    ? `/profile/${encodeURIComponent(
-        profile.username
-      )}`
-    : "/social";
+    profile.username
+      ? `/profile/${encodeURIComponent(
+          profile.username
+        )}`
+      : "/social";
 
   return (
     <article className="flex min-w-0 flex-col rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
-        {profileHref ? (
-          <Link
-            href={
-              profileHref
-            }
-            className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800"
-          >
-            {profile.avatar_url ? (
-              <Image
-                src={
+        <Link
+          href={
+            profileHref
+          }
+          className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800"
+        >
+          {profile.avatar_url ? (
+            <Image
+              src={
+                profile.avatar_url
+              }
+              alt={
+                displayName
+              }
+              width={
+                128
+              }
+              height={
+                128
+              }
+              unoptimized={
+                shouldUseOriginalImage(
                   profile.avatar_url
-                }
-                alt={
-                  displayName
-                }
-                width={
-                  128
-                }
-                height={
-                  128
-                }
-                unoptimized={
-                  shouldUseOriginalImage(
-                    profile.avatar_url
-                  )
-                }
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center font-semibold text-zinc-500">
-                {getInitial(
-                  profile
-                )}
-              </div>
-            )}
-          </Link>
-        ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-800 font-semibold text-zinc-500">
-            {getInitial(
-              profile
-            )}
-          </div>
-        )}
+                )
+              }
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center font-semibold text-zinc-500">
+              {getInitial(
+                profile
+              )}
+            </div>
+          )}
+        </Link>
 
         <FollowButton
           currentUserId={
@@ -2066,24 +2159,16 @@ function PersonSuggestion({
 
       <div className="mt-3 min-w-0">
         <div className="flex min-w-0 items-center gap-2">
-          {profileHref ? (
-            <Link
-              href={
-                profileHref
-              }
-              className="min-w-0 truncate font-semibold text-zinc-100 transition hover:text-fuchsia-300"
-            >
-              {
-                displayName
-              }
-            </Link>
-          ) : (
-            <p className="min-w-0 truncate font-semibold text-zinc-100">
-              {
-                displayName
-              }
-            </p>
-          )}
+          <Link
+            href={
+              profileHref
+            }
+            className="min-w-0 truncate font-semibold text-zinc-100 transition hover:text-fuchsia-300"
+          >
+            {
+              displayName
+            }
+          </Link>
 
           {profile.special_role ===
             "OWNER" && (
@@ -2141,78 +2226,62 @@ function PersonListItem({
     );
 
   const profileHref =
-  profile.username
-    ? `/profile/${encodeURIComponent(
-        profile.username
-      )}`
-    : "/social";
+    profile.username
+      ? `/profile/${encodeURIComponent(
+          profile.username
+        )}`
+      : "/social";
 
   return (
     <article className="flex min-w-0 items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
-      {profileHref ? (
-        <Link
-          href={
-            profileHref
-          }
-          className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800"
-        >
-          {profile.avatar_url ? (
-            <Image
-              src={
+      <Link
+        href={
+          profileHref
+        }
+        className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800"
+      >
+        {profile.avatar_url ? (
+          <Image
+            src={
+              profile.avatar_url
+            }
+            alt={
+              displayName
+            }
+            width={
+              128
+            }
+            height={
+              128
+            }
+            unoptimized={
+              shouldUseOriginalImage(
                 profile.avatar_url
-              }
-              alt={
-                displayName
-              }
-              width={
-                128
-              }
-              height={
-                128
-              }
-              unoptimized={
-                shouldUseOriginalImage(
-                  profile.avatar_url
-                )
-              }
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center font-semibold text-zinc-500">
-              {getInitial(
-                profile
-              )}
-            </div>
-          )}
-        </Link>
-      ) : (
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-800 font-semibold text-zinc-500">
-          {getInitial(
-            profile
-          )}
-        </div>
-      )}
+              )
+            }
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center font-semibold text-zinc-500">
+            {getInitial(
+              profile
+            )}
+          </div>
+        )}
+      </Link>
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          {profileHref ? (
-            <Link
-              href={
-                profileHref
-              }
-              className="truncate font-semibold text-zinc-100 transition hover:text-fuchsia-300"
-            >
-              {
-                displayName
-              }
-            </Link>
-          ) : (
-            <p className="truncate font-semibold text-zinc-100">
-              {
-                displayName
-              }
-            </p>
-          )}
+          <Link
+            href={
+              profileHref
+            }
+            className="truncate font-semibold text-zinc-100 transition hover:text-fuchsia-300"
+          >
+            {
+              displayName
+            }
+          </Link>
 
           {profile.special_role ===
             "OWNER" && (

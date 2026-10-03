@@ -3,6 +3,11 @@ import {
 } from "next/navigation";
 
 import {
+  getMediaArtworkMapKey,
+  getMixedMediaArtworkOverrides,
+} from "@/lib/media-artwork";
+
+import {
   createClient,
 } from "@/lib/supabase/server";
 
@@ -15,6 +20,12 @@ type SectionKey =
   | "FAVORITE_BOOKS"
   | "FAVORITE_GAMES";
 
+type MediaType =
+  | "MOVIE"
+  | "SERIES"
+  | "BOOK"
+  | "GAME";
+
 type SectionRow = {
   section_key:
     SectionKey;
@@ -24,6 +35,58 @@ type SectionRow = {
 
   position:
     number;
+};
+
+type FavoriteRow = {
+  id:
+    string;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title:
+    string;
+
+  cover_url:
+    | string
+    | null;
+
+  position:
+    number;
+};
+
+type ActivityType =
+  | "ADDED_PENDING"
+  | "STARTED"
+  | "EPISODE_WATCHED"
+  | "COMPLETED"
+  | "REVIEWED";
+
+type ActivityRow = {
+  id:
+    string;
+
+  activity_type:
+    ActivityType;
+
+  media_type:
+    MediaType;
+
+  external_id:
+    string;
+
+  title:
+    string;
+
+  cover_url:
+    | string
+    | null;
+
+  created_at:
+    string;
 };
 
 export default async function CustomizeProfilePage() {
@@ -151,6 +214,129 @@ export default async function CustomizeProfilePage() {
     );
   }
 
+  if (
+    sectionsResult.error
+  ) {
+    console.error(
+      "Error loading profile sections:",
+      sectionsResult.error
+    );
+  }
+
+  if (
+    favoritesResult.error
+  ) {
+    console.error(
+      "Error loading profile favorites:",
+      favoritesResult.error
+    );
+  }
+
+  if (
+    activityResult.error
+  ) {
+    console.error(
+      "Error loading profile activity:",
+      activityResult.error
+    );
+  }
+
+  const rawFavorites =
+    (
+      favoritesResult.data ??
+      []
+    ) as FavoriteRow[];
+
+  const rawActivity =
+    (
+      activityResult.data ??
+      []
+    ) as ActivityRow[];
+
+  const artworkOverrides =
+    await getMixedMediaArtworkOverrides([
+      ...rawFavorites,
+      ...rawActivity,
+    ]);
+
+  const initialFavorites =
+    rawFavorites.map(
+      (
+        favorite
+      ) => {
+        const override =
+          artworkOverrides.get(
+            getMediaArtworkMapKey(
+              favorite.media_type,
+              favorite.external_id
+            )
+          );
+
+        return {
+          ...favorite,
+
+          cover_url:
+            override
+              ?.poster_url ??
+            favorite.cover_url,
+
+          poster_position_x:
+            override
+              ?.poster_position_x ??
+            50,
+
+          poster_position_y:
+            override
+              ?.poster_position_y ??
+            50,
+
+          poster_zoom:
+            override
+              ?.poster_zoom ??
+            1,
+        };
+      }
+    );
+
+  const recentActivity =
+    rawActivity.map(
+      (
+        activity
+      ) => {
+        const override =
+          artworkOverrides.get(
+            getMediaArtworkMapKey(
+              activity.media_type,
+              activity.external_id
+            )
+          );
+
+        return {
+          ...activity,
+
+          cover_url:
+            override
+              ?.poster_url ??
+            activity.cover_url,
+
+          poster_position_x:
+            override
+              ?.poster_position_x ??
+            50,
+
+          poster_position_y:
+            override
+              ?.poster_position_y ??
+            50,
+
+          poster_zoom:
+            override
+              ?.poster_zoom ??
+            1,
+        };
+      }
+    );
+
   const defaultSections:
     SectionRow[] =
     [
@@ -251,12 +437,10 @@ export default async function CustomizeProfilePage() {
           sections
         }
         initialFavorites={
-          favoritesResult.data ??
-          []
+          initialFavorites
         }
         recentActivity={
-          activityResult.data ??
-          []
+          recentActivity
         }
       />
     </main>

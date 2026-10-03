@@ -8,6 +8,12 @@ export type MediaArtworkType =
   | "game"
   | "book";
 
+export type DatabaseMediaType =
+  | "MOVIE"
+  | "SERIES"
+  | "GAME"
+  | "BOOK";
+
 export type MediaArtworkOverride = {
   media_type:
     MediaArtworkType;
@@ -128,6 +134,44 @@ function normalizeOverride(
   };
 }
 
+export function toMediaArtworkType(
+  mediaType:
+    DatabaseMediaType
+): MediaArtworkType {
+  if (
+    mediaType ===
+    "MOVIE"
+  ) {
+    return "movie";
+  }
+
+  if (
+    mediaType ===
+    "SERIES"
+  ) {
+    return "series";
+  }
+
+  if (
+    mediaType ===
+    "GAME"
+  ) {
+    return "game";
+  }
+
+  return "book";
+}
+
+export function getMediaArtworkMapKey(
+  mediaType:
+    DatabaseMediaType,
+
+  externalId:
+    string
+) {
+  return `${mediaType}:${externalId}`;
+}
+
 export async function getMediaArtworkOverride(
   mediaType:
     MediaArtworkType,
@@ -135,6 +179,12 @@ export async function getMediaArtworkOverride(
   externalId:
     string
 ) {
+  if (
+    !externalId
+  ) {
+    return null;
+  }
+
   const supabase =
     await createClient();
 
@@ -179,7 +229,9 @@ export async function getMediaArtworkOverride(
     return null;
   }
 
-  if (!data) {
+  if (
+    !data
+  ) {
     return null;
   }
 
@@ -199,7 +251,12 @@ export async function getMediaArtworkOverrides(
     [
       ...new Set(
         externalIds.filter(
-          Boolean
+          (
+            externalId
+          ) =>
+            Boolean(
+              externalId
+            )
         )
       ),
     ];
@@ -279,204 +336,6 @@ export async function getMediaArtworkOverrides(
   return result;
 }
 
-export type MixedMediaArtworkKey = {
-  mediaType:
-    MediaArtworkType;
-
-  externalId:
-    string;
-};
-
-export async function getMixedMediaArtworkOverrides(
-  keys:
-    MixedMediaArtworkKey[]
-) {
-  const unique =
-    Array.from(
-      new Map(
-        keys.map(
-          (
-            item
-          ) => [
-            `${item.mediaType}:${item.externalId}`,
-            item,
-          ]
-        )
-      ).values()
-    );
-
-  const [
-    movies,
-    series,
-    games,
-    books,
-  ] =
-    await Promise.all([
-      getMediaArtworkOverrides(
-        "movie",
-        unique
-          .filter(
-            (
-              item
-            ) =>
-              item.mediaType ===
-              "movie"
-          )
-          .map(
-            (
-              item
-            ) =>
-              item.externalId
-          )
-      ),
-
-      getMediaArtworkOverrides(
-        "series",
-        unique
-          .filter(
-            (
-              item
-            ) =>
-              item.mediaType ===
-              "series"
-          )
-          .map(
-            (
-              item
-            ) =>
-              item.externalId
-          )
-      ),
-
-      getMediaArtworkOverrides(
-        "game",
-        unique
-          .filter(
-            (
-              item
-            ) =>
-              item.mediaType ===
-              "game"
-          )
-          .map(
-            (
-              item
-            ) =>
-              item.externalId
-          )
-      ),
-
-      getMediaArtworkOverrides(
-        "book",
-        unique
-          .filter(
-            (
-              item
-            ) =>
-              item.mediaType ===
-              "book"
-          )
-          .map(
-            (
-              item
-            ) =>
-              item.externalId
-          )
-      ),
-    ]);
-
-  const result =
-    new Map<
-      string,
-      MediaArtworkOverride
-    >();
-
-  for (
-    const [
-      type,
-      collection,
-    ] of [
-      [
-        "movie",
-        movies,
-      ],
-
-      [
-        "series",
-        series,
-      ],
-
-      [
-        "game",
-        games,
-      ],
-
-      [
-        "book",
-        books,
-      ],
-    ] as const
-  ) {
-    for (
-      const [
-        externalId,
-        override,
-      ] of collection
-    ) {
-      result.set(
-        `${type}:${externalId}`,
-        override
-      );
-    }
-  }
-
-  return result;
-}
-
-export type DatabaseMediaType =
-  | "MOVIE"
-  | "SERIES"
-  | "GAME"
-  | "BOOK";
-
-export function toMediaArtworkType(
-  mediaType:
-    DatabaseMediaType
-): MediaArtworkType {
-  if (
-    mediaType ===
-    "MOVIE"
-  ) {
-    return "movie";
-  }
-
-  if (
-    mediaType ===
-    "SERIES"
-  ) {
-    return "series";
-  }
-
-  if (
-    mediaType ===
-    "GAME"
-  ) {
-    return "game";
-  }
-
-  return "book";
-}
-
-export function getMediaArtworkMapKey(
-  mediaType:
-    DatabaseMediaType,
-
-  externalId:
-    string
-) {
-  return `${mediaType}:${externalId}`;
-}
-
 export async function getMixedMediaArtworkOverrides(
   items:
     {
@@ -510,14 +369,16 @@ export async function getMixedMediaArtworkOverrides(
     items
   ) {
     if (
-      item.external_id
+      !item.external_id
     ) {
-      grouped[
-        item.media_type
-      ].add(
-        item.external_id
-      );
+      continue;
     }
+
+    grouped[
+      item.media_type
+    ].add(
+      item.external_id
+    );
   }
 
   const mediaTypes:
@@ -533,22 +394,42 @@ export async function getMixedMediaArtworkOverrides(
       mediaTypes.map(
         async (
           mediaType
-        ) => ({
-          mediaType,
+        ) => {
+          const externalIds =
+            [
+              ...grouped[
+                mediaType
+              ],
+            ];
 
-          overrides:
+          if (
+            externalIds.length ===
+            0
+          ) {
+            return {
+              mediaType,
+
+              overrides:
+                new Map<
+                  string,
+                  MediaArtworkOverride
+                >(),
+            };
+          }
+
+          const overrides =
             await getMediaArtworkOverrides(
               toMediaArtworkType(
                 mediaType
               ),
+              externalIds
+            );
 
-              [
-                ...grouped[
-                  mediaType
-                ],
-              ]
-            ),
-        })
+          return {
+            mediaType,
+            overrides,
+          };
+        }
       )
     );
 
