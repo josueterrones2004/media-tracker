@@ -27,6 +27,14 @@ import {
   Tv,
 } from "lucide-react";
 
+import ProfileReviewModal from "./ProfileReviewModal";
+
+type MediaType =
+  | "MOVIE"
+  | "SERIES"
+  | "GAME"
+  | "BOOK";
+
 type ActivityEvent = {
   id: string;
 
@@ -40,10 +48,7 @@ type ActivityEvent = {
     | "REVIEWED";
 
   media_type:
-    | "MOVIE"
-    | "SERIES"
-    | "GAME"
-    | "BOOK";
+    MediaType;
 
   external_id: string;
 
@@ -76,16 +81,15 @@ type Review = {
   id: string;
 
   media_type:
-    | "MOVIE"
-    | "SERIES"
-    | "GAME"
-    | "BOOK";
+    MediaType;
 
   external_id: string;
 
   title: string;
 
-  review_text: string;
+  review_text:
+    | string
+    | null;
 
   liked: boolean;
 
@@ -121,13 +125,13 @@ interface ProfileActivityProps {
     string;
 
   mode?:
-    "preview"
+    | "preview"
     | "full";
 }
 
 function getMediaHref(
   mediaType:
-    ActivityEvent["media_type"],
+    MediaType,
 
   externalId:
     string
@@ -153,14 +157,7 @@ function getMediaHref(
     return `/books/${externalId}`;
   }
 
-  if (
-    mediaType ===
-    "GAME"
-  ) {
-    return `/games/${externalId}`;
-  }
-
-  return "#";
+  return `/games/${externalId}`;
 }
 
 function formatActivityDate(
@@ -380,6 +377,7 @@ function ReviewIcons({
             size
           }
           fill="currentColor"
+          className="text-red-500"
         />
       ) : (
         <HeartCrack
@@ -524,6 +522,90 @@ function getCoverData(
         ?.poster_zoom ??
       1,
   };
+}
+
+function StandardPoster({
+  href,
+  cover,
+  title,
+  positionX,
+  positionY,
+  zoom,
+  size,
+}: {
+  href:
+    string;
+
+  cover:
+    | string
+    | null;
+
+  title:
+    string;
+
+  positionX:
+    number;
+
+  positionY:
+    number;
+
+  zoom:
+    number;
+
+  size:
+    | "preview"
+    | "full";
+}) {
+  return (
+    <Link
+      href={
+        href
+      }
+      className={`block overflow-hidden border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600 ${
+        size ===
+        "preview"
+          ? "rounded-xl"
+          : "rounded-lg"
+      }`}
+    >
+      {cover ? (
+        <div className="relative aspect-[2/3] w-full overflow-hidden">
+          <Image
+            src={
+              cover
+            }
+            alt={
+              title
+            }
+            fill
+            sizes={
+              size ===
+              "preview"
+                ? "155px"
+                : "85px"
+            }
+            unoptimized={
+              shouldUseOriginalImage(
+                cover
+              )
+            }
+            className="object-cover"
+            style={{
+              objectPosition:
+                `${positionX}% ${positionY}%`,
+
+              transform:
+                `scale(${zoom})`,
+            }}
+          />
+        </div>
+      ) : (
+        <div className="flex aspect-[2/3] items-center justify-center px-3 text-center text-xs text-zinc-600">
+          Sin portada
+        </div>
+      )}
+    </Link>
+  );
 }
 
 export default async function ProfileActivity({
@@ -701,10 +783,6 @@ export default async function ProfileActivity({
     );
   }
 
-  /*
-   * VISTA PEQUEÑA DEL PERFIL
-   */
-
   if (
     mode ===
     "preview"
@@ -754,52 +832,71 @@ export default async function ProfileActivity({
                   }
                   className="w-[155px] shrink-0"
                 >
-                  <Link
-                    href={
-                      href
-                    }
-                    className="block overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
-                  >
-                    {cover ? (
-                      <div className="relative aspect-[2/3] w-full overflow-hidden">
-                        <Image
-                          src={
-                            cover
-                          }
-                          alt={
-                            activity.title
-                          }
-                          fill
-                          sizes="155px"
-                          unoptimized={
-                            shouldUseOriginalImage(
-                              cover
-                            )
-                          }
-                          className="object-cover"
-                          style={{
-                            objectPosition:
-                              `${positionX}% ${positionY}%`,
-
-                            transform:
-                              `scale(${zoom})`,
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex aspect-[2/3] items-center justify-center px-4 text-center text-xs text-zinc-600">
-                        Sin portada
-                      </div>
-                    )}
-                  </Link>
+                  {review ? (
+                    <ProfileReviewModal
+                      reviewId={
+                        review.id
+                      }
+                      mediaType={
+                        review.media_type
+                      }
+                      title={
+                        review.title
+                      }
+                      coverUrl={
+                        cover
+                      }
+                      posterPositionX={
+                        positionX
+                      }
+                      posterPositionY={
+                        positionY
+                      }
+                      posterZoom={
+                        zoom
+                      }
+                      createdAt={
+                        activity.created_at
+                      }
+                      variant="poster"
+                    />
+                  ) : (
+                    <StandardPoster
+                      href={
+                        href
+                      }
+                      cover={
+                        cover
+                      }
+                      title={
+                        activity.title
+                      }
+                      positionX={
+                        positionX
+                      }
+                      positionY={
+                        positionY
+                      }
+                      zoom={
+                        zoom
+                      }
+                      size="preview"
+                    />
+                  )}
 
                   <div className="mt-2">
                     {review ? (
-                      <ReviewIcons
-                        review={
-                          review
-                        }
-                      />
+                      <>
+                        <ReviewIcons
+                          review={
+                            review
+                          }
+                        />
+
+                        <p className="mt-1 truncate text-[11px] text-zinc-600">
+                          Ver review
+                        </p>
+                      </>
                     ) : (
                       <div className="flex items-center gap-2 text-zinc-500">
                         <ActivityStatus
@@ -830,7 +927,9 @@ export default async function ProfileActivity({
         </div>
 
         <Link
-          href={`/profile/${username}/activity`}
+          href={`/profile/${encodeURIComponent(
+            username
+          )}/activity`}
           className="mt-2 inline-block text-sm text-zinc-500 transition hover:text-zinc-200"
         >
           Ver más actividad reciente →
@@ -838,10 +937,6 @@ export default async function ProfileActivity({
       </div>
     );
   }
-
-  /*
-   * HISTORIAL COMPLETO
-   */
 
   return (
     <div className="divide-y divide-zinc-800">
@@ -887,52 +982,68 @@ export default async function ProfileActivity({
               }
               className="flex gap-5 py-5"
             >
-              <Link
-                href={
-                  href
-                }
-                className="w-[85px] shrink-0 overflow-hidden rounded-lg border border-zinc-800 transition hover:border-zinc-600"
-              >
-                {cover ? (
-                  <div className="relative aspect-[2/3] w-full overflow-hidden">
-                    <Image
-                      src={
-                        cover
-                      }
-                      alt={
-                        activity.title
-                      }
-                      fill
-                      sizes="85px"
-                      unoptimized={
-                        shouldUseOriginalImage(
-                          cover
-                        )
-                      }
-                      className="object-cover"
-                      style={{
-                        objectPosition:
-                          `${positionX}% ${positionY}%`,
-
-                        transform:
-                          `scale(${zoom})`,
-                      }}
-                    />
-                  </div>
+              <div className="w-[85px] shrink-0">
+                {review ? (
+                  <ProfileReviewModal
+                    reviewId={
+                      review.id
+                    }
+                    mediaType={
+                      review.media_type
+                    }
+                    title={
+                      review.title
+                    }
+                    coverUrl={
+                      cover
+                    }
+                    posterPositionX={
+                      positionX
+                    }
+                    posterPositionY={
+                      positionY
+                    }
+                    posterZoom={
+                      zoom
+                    }
+                    createdAt={
+                      activity.created_at
+                    }
+                    variant="poster"
+                  />
                 ) : (
-                  <div className="flex aspect-[2/3] items-center justify-center px-2 text-center text-xs text-zinc-600">
-                    Sin portada
-                  </div>
+                  <StandardPoster
+                    href={
+                      href
+                    }
+                    cover={
+                      cover
+                    }
+                    title={
+                      activity.title
+                    }
+                    positionX={
+                      positionX
+                    }
+                    positionY={
+                      positionY
+                    }
+                    zoom={
+                      zoom
+                    }
+                    size="full"
+                  />
                 )}
-              </Link>
+              </div>
 
               <div className="min-w-0 flex-1 py-1">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-zinc-400">
                       {getFullActivityText(
                         activity
                       )}{" "}
+
                       <Link
                         href={
                           href
@@ -960,6 +1071,7 @@ export default async function ProfileActivity({
                           {
                             activity.episode_number
                           }
+
                           {activity.episode_title
                             ? ` · ${activity.episode_title}`
                             : ""}
@@ -975,31 +1087,33 @@ export default async function ProfileActivity({
                 </div>
 
                 {review && (
-                  <>
-                    <div className="mt-4">
-                      <ReviewIcons
-                        review={
-                          review
-                        }
-                        size={
-                          17
-                        }
-                      />
-                    </div>
+                  <div className="mt-4">
+                    <ReviewIcons
+                      review={
+                        review
+                      }
+                      size={
+                        17
+                      }
+                    />
 
                     {review.contains_spoilers ? (
                       <p className="mt-3 text-sm text-zinc-600">
-                        Esta reseña contiene
-                        spoilers.
+                        Esta reseña contiene spoilers.
+                        Pulsa la portada para verla.
                       </p>
-                    ) : (
+                    ) : review.review_text ? (
                       <p className="mt-3 line-clamp-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-400">
                         {
                           review.review_text
                         }
                       </p>
+                    ) : (
+                      <p className="mt-3 text-sm italic text-zinc-600">
+                        Review sin texto.
+                      </p>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </article>

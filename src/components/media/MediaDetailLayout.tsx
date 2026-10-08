@@ -8,14 +8,25 @@ import {
   type ReactNode,
 } from "react";
 
+import GuestMediaActions from "@/components/media/GuestMediaActions";
+
 import {
   shouldUseOriginalImage,
 } from "@/lib/image-optimization";
 
+import {
+  createClient,
+} from "@/lib/supabase/server";
+
 export type MediaInformationItem = {
-  label: string;
-  value: ReactNode;
-  icon?: ReactNode;
+  label:
+    string;
+
+  value:
+    ReactNode;
+
+  icon?:
+    ReactNode;
 };
 
 export type MediaHeroMode =
@@ -23,9 +34,11 @@ export type MediaHeroMode =
   | "compact";
 
 export interface MediaDetailLayoutProps {
-  title: string;
+  title:
+    string;
 
-  eyebrow: string;
+  eyebrow:
+    string;
 
   coverUrl:
     | string
@@ -35,36 +48,54 @@ export interface MediaDetailLayoutProps {
     | string
     | null;
 
-  coverPositionX?: number;
-  coverPositionY?: number;
-  coverZoom?: number;
+  coverPositionX?:
+    number;
 
-  backdropPositionX?: number;
-  backdropPositionY?: number;
-  backdropZoom?: number;
+  coverPositionY?:
+    number;
 
-  heroMode?: MediaHeroMode;
+  coverZoom?:
+    number;
 
-  meta?: string[];
+  backdropPositionX?:
+    number;
 
-  tags?: string[];
+  backdropPositionY?:
+    number;
+
+  backdropZoom?:
+    number;
+
+  heroMode?:
+    MediaHeroMode;
+
+  meta?:
+    string[];
+
+  tags?:
+    string[];
 
   description:
     | string
     | null;
 
-  information?: MediaInformationItem[];
+  information?:
+    MediaInformationItem[];
 
-  children?: ReactNode;
+  children?:
+    ReactNode;
 
-  mainContent?: ReactNode;
+  mainContent?:
+    ReactNode;
 
-  bottomContent?: ReactNode;
+  bottomContent?:
+    ReactNode;
 
-  noDescriptionText?: string;
+  noDescriptionText?:
+    string;
 }
 
-export default function MediaDetailLayout({
+export default async function MediaDetailLayout({
   title,
   eyebrow,
   coverUrl,
@@ -91,6 +122,16 @@ export default function MediaDetailLayout({
   noDescriptionText =
     "No hay una descripción disponible.",
 }: MediaDetailLayoutProps) {
+  const supabase =
+    await createClient();
+
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
   const cleanMeta =
     meta.filter(
       (
@@ -101,10 +142,15 @@ export default function MediaDetailLayout({
         )
     );
 
+  const actions =
+    user
+      ? children
+      : (
+          <GuestMediaActions />
+        );
+
   const heroContent = (
     <div className="flex flex-col gap-6 sm:flex-row sm:items-end lg:gap-9">
-      {/* COVER */}
-
       <div className="w-[155px] shrink-0 sm:w-[190px] lg:w-[205px]">
         {coverUrl ? (
           <div className="aspect-[2/3] w-full overflow-hidden rounded-xl border border-zinc-700/70 bg-zinc-900 shadow-2xl shadow-black/60">
@@ -115,8 +161,12 @@ export default function MediaDetailLayout({
               alt={
                 title
               }
-              width={500}
-              height={750}
+              width={
+                500
+              }
+              height={
+                750
+              }
               priority
               unoptimized={
                 shouldUseOriginalImage(
@@ -136,7 +186,9 @@ export default function MediaDetailLayout({
         ) : (
           <div className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-center text-zinc-600 shadow-2xl">
             <ImageOff
-              size={24}
+              size={
+                24
+              }
             />
 
             <span className="text-xs">
@@ -146,15 +198,17 @@ export default function MediaDetailLayout({
         )}
       </div>
 
-      {/* TITLE */}
-
       <div className="min-w-0 flex-1 pb-1 sm:pb-3 lg:pb-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-          {eyebrow}
+          {
+            eyebrow
+          }
         </p>
 
         <h1 className="mt-2 max-w-4xl text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl lg:text-[44px] lg:leading-[1.08]">
-          {title}
+          {
+            title
+          }
         </h1>
 
         {cleanMeta.length >
@@ -177,7 +231,9 @@ export default function MediaDetailLayout({
                   )}
 
                   <span>
-                    {value}
+                    {
+                      value
+                    }
                   </span>
                 </div>
               )
@@ -198,16 +254,20 @@ export default function MediaDetailLayout({
                   }
                   className="rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-1.5 text-xs text-zinc-400"
                 >
-                  {tag}
+                  {
+                    tag
+                  }
                 </span>
               )
             )}
           </div>
         )}
 
-        {children && (
+        {actions && (
           <div className="[&>section]:mt-6">
-            {children}
+            {
+              actions
+            }
           </div>
         )}
       </div>
@@ -246,31 +306,31 @@ export default function MediaDetailLayout({
             ) : (
               <div className="flex h-full items-center justify-center bg-zinc-900 text-zinc-800">
                 <ImageOff
-                  size={36}
+                  size={
+                    36
+                  }
                 />
               </div>
             )}
 
-            {/* LEFT */}
-
             <div className="pointer-events-none absolute inset-y-0 left-0 w-[22%] bg-gradient-to-r from-zinc-950 via-zinc-950/55 to-transparent" />
 
-            {/* RIGHT */}
-
             <div className="pointer-events-none absolute inset-y-0 right-0 w-[22%] bg-gradient-to-l from-zinc-950 via-zinc-950/55 to-transparent" />
-
-            {/* BOTTOM */}
 
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t from-zinc-950 via-zinc-950/45 to-transparent" />
           </div>
 
           <div className="relative z-10 -mt-24 px-4 sm:-mt-32 sm:px-6 lg:-mt-36 lg:px-8">
-            {heroContent}
+            {
+              heroContent
+            }
           </div>
         </section>
       ) : (
         <section className="px-4 pt-10 sm:px-6 sm:pt-12 lg:px-8 lg:pt-14">
-          {heroContent}
+          {
+            heroContent
+          }
         </section>
       )}
 
@@ -298,7 +358,9 @@ export default function MediaDetailLayout({
 
           {mainContent && (
             <div className="mt-10">
-              {mainContent}
+              {
+                mainContent
+              }
             </div>
           )}
         </section>
@@ -340,7 +402,9 @@ export default function MediaDetailLayout({
 
       {bottomContent && (
         <div className="mt-12 px-4 sm:px-6 lg:px-8">
-          {bottomContent}
+          {
+            bottomContent
+          }
         </div>
       )}
     </main>
@@ -352,24 +416,33 @@ function InformationRow({
   label,
   children,
 }: {
-  icon?: ReactNode;
+  icon?:
+    ReactNode;
 
-  label: string;
+  label:
+    string;
 
-  children: ReactNode;
+  children:
+    ReactNode;
 }) {
   return (
     <div>
       <div className="flex items-center gap-2 text-zinc-500">
-        {icon}
+        {
+          icon
+        }
 
         <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">
-          {label}
+          {
+            label
+          }
         </span>
       </div>
 
       <div className="mt-2 text-sm leading-6 text-zinc-300">
-        {children}
+        {
+          children
+        }
       </div>
     </div>
   );

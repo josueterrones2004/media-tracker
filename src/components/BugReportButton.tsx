@@ -231,7 +231,7 @@ export default function BugReportButton() {
           setSuccess(false);
           setErrorMessage("");
         }}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-400 shadow-xl backdrop-blur transition hover:border-fuchsia-500/30 hover:text-fuchsia-300"
+        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-5 z-40 flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-400 shadow-xl backdrop-blur transition hover:border-fuchsia-500/30 hover:text-fuchsia-300 md:bottom-5"
       >
         <Bug
           size={17}

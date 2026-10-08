@@ -41,6 +41,7 @@ import {
 } from "@/lib/supabase/server";
 
 import ProfileActivity from "../ProfileActivity";
+import ProfileReviewModal from "../ProfileReviewModal";
 
 import ProfileMediaHeader, {
   CroppedProfileImage,
@@ -81,6 +82,7 @@ type SectionKey =
 type MobileTab =
   | "profile"
   | "activity"
+  | "reviews"
   | "pending";
 
 type Profile = {
@@ -210,6 +212,8 @@ function isMobileTab(
     value ===
       "activity" ||
     value ===
+      "reviews" ||
+    value ===
       "pending"
   );
 }
@@ -238,27 +242,6 @@ function getMediaHref(
   }
 }
 
-function getMediaLabel(
-  mediaType:
-    MediaType
-) {
-  switch (
-    mediaType
-  ) {
-    case "MOVIE":
-      return "Película";
-
-    case "SERIES":
-      return "Serie";
-
-    case "BOOK":
-      return "Libro";
-
-    case "GAME":
-      return "Juego";
-  }
-}
-
 function getCurrentLabel(
   mediaType:
     MediaType
@@ -277,33 +260,6 @@ function getCurrentLabel(
 
     case "GAME":
       return "Jugando";
-  }
-}
-
-function formatShortDate(
-  value:
-    string
-) {
-  try {
-    return new Intl.DateTimeFormat(
-      "es-MX",
-      {
-        day:
-          "numeric",
-
-        month:
-          "short",
-
-        year:
-          "numeric",
-      }
-    ).format(
-      new Date(
-        value
-      )
-    );
-  } catch {
-    return "";
   }
 }
 
@@ -581,60 +537,6 @@ export default async function PublicProfilePage({
         ),
     ]);
 
-  if (
-    followersResult.error
-  ) {
-    console.error(
-      "Error loading followers:",
-      followersResult.error
-    );
-  }
-
-  if (
-    followingResult.error
-  ) {
-    console.error(
-      "Error loading following:",
-      followingResult.error
-    );
-  }
-
-  if (
-    sectionsResult.error
-  ) {
-    console.error(
-      "Error loading profile sections:",
-      sectionsResult.error
-    );
-  }
-
-  if (
-    favoritesResult.error
-  ) {
-    console.error(
-      "Error loading profile favorites:",
-      favoritesResult.error
-    );
-  }
-
-  if (
-    libraryResult.error
-  ) {
-    console.error(
-      "Error loading public library:",
-      libraryResult.error
-    );
-  }
-
-  if (
-    reviewsResult.error
-  ) {
-    console.error(
-      "Error loading public reviews:",
-      reviewsResult.error
-    );
-  }
-
   const followersCount =
     followersResult.count ??
     0;
@@ -888,13 +790,7 @@ export default async function PublicProfilePage({
                   }
                 />
 
-                <span className="hidden sm:inline">
-                  Editar perfil
-                </span>
-
-                <span className="sm:hidden">
-                  Editar
-                </span>
+                Editar perfil
               </Link>
             ) : (
               <FollowButton
@@ -913,7 +809,7 @@ export default async function PublicProfilePage({
         >
           <div className="text-left">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-100 lg:text-[28px]">
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
                 {
                   displayName
                 }
@@ -921,71 +817,53 @@ export default async function PublicProfilePage({
 
               {profile.special_role ===
                 "OWNER" && (
-                <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-medium text-fuchsia-300 lg:text-[11px]">
+                <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] text-fuchsia-300">
                   Owner
-                </span>
-              )}
-
-              {profile.special_role ===
-                "BETA_TESTER" && (
-                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400 lg:text-[11px]">
-                  Beta Tester
                 </span>
               )}
             </div>
 
             {profile.username && (
-              <p className="mt-0.5 text-sm text-zinc-500">
-                @
-                {
-                  profile.username
-                }
+              <p className="mt-1 text-sm text-zinc-500">
+                @{profile.username}
               </p>
             )}
 
-            {profile.bio?.trim() ? (
+            {profile.bio && (
               <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-zinc-300">
                 {
                   profile.bio
                 }
               </p>
-            ) : null}
+            )}
 
-            <div className="mt-4 flex flex-wrap items-center gap-5 text-sm">
+            <div className="mt-4 flex gap-5 text-sm">
               <Link
                 href={`${connectionsPath}?tab=following`}
-                className="group"
               >
-                <span className="font-semibold text-zinc-200 transition group-hover:text-white">
+                <strong>
                   {
                     followingCount
                   }
-                </span>
-
-                <span className="ml-1.5 text-zinc-500 transition group-hover:text-zinc-300">
-                  Siguiendo
-                </span>
+                </strong>{" "}
+                Siguiendo
               </Link>
 
               <Link
                 href={`${connectionsPath}?tab=followers`}
-                className="group"
               >
-                <span className="font-semibold text-zinc-200 transition group-hover:text-white">
+                <strong>
                   {
                     followersCount
                   }
-                </span>
-
-                <span className="ml-1.5 text-zinc-500 transition group-hover:text-zinc-300">
-                  Seguidores
-                </span>
+                </strong>{" "}
+                Seguidores
               </Link>
             </div>
           </div>
         </ProfileMediaHeader>
 
-        <nav className="mt-6 grid w-full grid-cols-3 border-y border-zinc-800 lg:hidden">
+        <nav className="mt-6 grid grid-cols-4 border-y border-zinc-800 lg:hidden">
           <MobileTabLink
             href={`${profilePath}?tab=profile`}
             active={
@@ -1003,7 +881,17 @@ export default async function PublicProfilePage({
               "activity"
             }
           >
-            Actividad reciente
+            Actividad
+          </MobileTabLink>
+
+          <MobileTabLink
+            href={`${profilePath}?tab=reviews`}
+            active={
+              activeTab ===
+              "reviews"
+            }
+          >
+            Reviews
           </MobileTabLink>
 
           <MobileTabLink
@@ -1043,40 +931,37 @@ export default async function PublicProfilePage({
           {activeTab ===
             "activity" &&
             profile.username && (
-              <section>
-                <MobileSectionTitle>
-                  Actividad reciente
-                </MobileSectionTitle>
-
-                <ProfileActivity
-                  profileUserId={
-                    profile.id
-                  }
-                  username={
-                    profile.username
-                  }
-                  mode="preview"
-                />
-              </section>
+              <ProfileActivity
+                profileUserId={
+                  profile.id
+                }
+                username={
+                  profile.username
+                }
+                mode="preview"
+              />
             )}
 
           {activeTab ===
-            "pending" && (
-            <section>
-              <MobileSectionTitle>
-                Pendientes
-              </MobileSectionTitle>
+            "reviews" && (
+            <ReviewGrid
+              reviews={
+                reviews
+              }
+            />
+          )}
 
-              <PendingGrid
-                items={
-                  pendingItems
-                }
-              />
-            </section>
+          {activeTab ===
+            "pending" && (
+            <PendingGrid
+              items={
+                pendingItems
+              }
+            />
           )}
         </div>
 
-        <div className="mt-9 hidden items-start gap-10 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_270px] xl:grid-cols-[minmax(0,1fr)_290px]">
+        <div className="mt-9 hidden gap-10 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_290px]">
           <div className="min-w-0">
             {profile.username && (
               <ProfileSections
@@ -1096,107 +981,81 @@ export default async function PublicProfilePage({
             )}
           </div>
 
-          <aside className="space-y-8 lg:sticky lg:top-24">
+          <aside className="space-y-8">
             <SidebarSection
               title="Estadísticas"
             >
-              <div className="divide-y divide-zinc-900">
-                <StatRow
-                  icon={
-                    <Library
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Registrados"
-                  value={
-                    registeredMedia.size
-                  }
-                />
+              <StatRow
+                icon={
+                  <Library
+                    size={14}
+                  />
+                }
+                label="Registrados"
+                value={
+                  registeredMedia.size
+                }
+              />
 
-                <StatRow
-                  icon={
-                    <Clapperboard
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Películas"
-                  value={
-                    mediaCounts.MOVIE
-                  }
-                />
+              <StatRow
+                icon={
+                  <Clapperboard
+                    size={14}
+                  />
+                }
+                label="Películas"
+                value={
+                  mediaCounts.MOVIE
+                }
+              />
 
-                <StatRow
-                  icon={
-                    <Tv
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Series"
-                  value={
-                    mediaCounts.SERIES
-                  }
-                />
+              <StatRow
+                icon={
+                  <Tv
+                    size={14}
+                  />
+                }
+                label="Series"
+                value={
+                  mediaCounts.SERIES
+                }
+              />
 
-                <StatRow
-                  icon={
-                    <Gamepad2
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Juegos"
-                  value={
-                    mediaCounts.GAME
-                  }
-                />
+              <StatRow
+                icon={
+                  <Gamepad2
+                    size={14}
+                  />
+                }
+                label="Juegos"
+                value={
+                  mediaCounts.GAME
+                }
+              />
 
-                <StatRow
-                  icon={
-                    <BookOpen
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Libros"
-                  value={
-                    mediaCounts.BOOK
-                  }
-                />
+              <StatRow
+                icon={
+                  <BookOpen
+                    size={14}
+                  />
+                }
+                label="Libros"
+                value={
+                  mediaCounts.BOOK
+                }
+              />
 
-                <StatRow
-                  icon={
-                    <Heart
-                      size={
-                        14
-                      }
-                    />
-                  }
-                  label="Reviews"
-                  value={
-                    reviews.length
-                  }
-                />
-              </div>
-
-              <div className="mt-3 flex items-center justify-between border-t border-zinc-900 pt-3 text-xs">
-                <span className="text-zinc-600">
-                  Pendientes
-                </span>
-
-                <span className="font-medium text-zinc-400">
-                  {
-                    pendingItems.length
-                  }
-                </span>
-              </div>
+              <StatRow
+                icon={
+                  <Heart
+                    size={14}
+                  />
+                }
+                label="Reviews"
+                value={
+                  reviews.length
+                }
+              />
             </SidebarSection>
 
             <SidebarSection
@@ -1217,10 +1076,10 @@ export default async function PublicProfilePage({
                           item.media_type,
                           item.external_id
                         )}
-                        className="group flex items-center gap-3"
+                        className="flex gap-3"
                       >
                         {item.cover_url ? (
-                          <div className="relative h-14 w-10 shrink-0 overflow-hidden bg-zinc-900">
+                          <div className="relative h-14 w-10 overflow-hidden">
                             <Image
                               src={
                                 item.cover_url
@@ -1236,27 +1095,20 @@ export default async function PublicProfilePage({
                                 )
                               }
                               className="object-cover"
-                              style={{
-                                objectPosition:
-                                  `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
-
-                                transform:
-                                  `scale(${item.poster_zoom ?? 1})`,
-                              }}
                             />
                           </div>
                         ) : (
-                          <div className="h-14 w-10 shrink-0 bg-zinc-900" />
+                          <div className="h-14 w-10 bg-zinc-900" />
                         )}
 
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                        <div>
+                          <p className="text-sm text-zinc-300">
                             {
                               item.title
                             }
                           </p>
 
-                          <p className="mt-1 text-xs text-zinc-600">
+                          <p className="text-xs text-zinc-600">
                             {getCurrentLabel(
                               item.media_type
                             )}
@@ -1267,7 +1119,7 @@ export default async function PublicProfilePage({
                   )}
                 </div>
               ) : (
-                <p className="text-sm leading-6 text-zinc-600">
+                <p className="text-sm text-zinc-600">
                   No hay ningún medio en curso.
                 </p>
               )}
@@ -1283,66 +1135,36 @@ export default async function PublicProfilePage({
                     (
                       review
                     ) => (
-                      <Link
+                      <ProfileReviewModal
                         key={
                           review.id
                         }
-                        href={getMediaHref(
-                          review.media_type,
-                          review.external_id
-                        )}
-                        className="group flex gap-3"
-                      >
-                        {review.cover_url ? (
-                          <div className="relative h-14 w-10 shrink-0 overflow-hidden bg-zinc-900">
-                            <Image
-                              src={
-                                review.cover_url
-                              }
-                              alt={
-                                review.title
-                              }
-                              fill
-                              sizes="40px"
-                              unoptimized={
-                                shouldUseOriginalImage(
-                                  review.cover_url
-                                )
-                              }
-                              className="object-cover"
-                              style={{
-                                objectPosition:
-                                  `${review.poster_position_x ?? 50}% ${review.poster_position_y ?? 50}%`,
-
-                                transform:
-                                  `scale(${review.poster_zoom ?? 1})`,
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-14 w-10 shrink-0 bg-zinc-900" />
-                        )}
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-zinc-300 transition group-hover:text-white">
-                            {
-                              review.title
-                            }
-                          </p>
-
-                          <p className="mt-1 text-xs text-zinc-600">
-                            {getMediaLabel(
-                              review.media_type
-                            )}
-                          </p>
-
-                          <p className="mt-0.5 text-[11px] text-zinc-700">
-                            {formatShortDate(
-                              review.created_at
-                            )}
-                          </p>
-                        </div>
-                      </Link>
+                        reviewId={
+                          review.id
+                        }
+                        mediaType={
+                          review.media_type
+                        }
+                        title={
+                          review.title
+                        }
+                        coverUrl={
+                          review.cover_url
+                        }
+                        posterPositionX={
+                          review.poster_position_x
+                        }
+                        posterPositionY={
+                          review.poster_position_y
+                        }
+                        posterZoom={
+                          review.poster_zoom
+                        }
+                        createdAt={
+                          review.created_at
+                        }
+                        variant="sidebar"
+                      />
                     )
                   )}
                 </div>
@@ -1352,58 +1174,70 @@ export default async function PublicProfilePage({
                 </p>
               )}
             </SidebarSection>
-
-            <SidebarSection
-              title="Social"
-            >
-              <div className="space-y-3 text-sm">
-                <Link
-                  href={`${connectionsPath}?tab=followers`}
-                  className="flex items-center justify-between text-zinc-500 transition hover:text-zinc-300"
-                >
-                  <span>
-                    Seguidores
-                  </span>
-
-                  <span className="font-medium text-zinc-300">
-                    {
-                      followersCount
-                    }
-                  </span>
-                </Link>
-
-                <Link
-                  href={`${connectionsPath}?tab=following`}
-                  className="flex items-center justify-between text-zinc-500 transition hover:text-zinc-300"
-                >
-                  <span>
-                    Siguiendo
-                  </span>
-
-                  <span className="font-medium text-zinc-300">
-                    {
-                      followingCount
-                    }
-                  </span>
-                </Link>
-
-                <div className="flex items-center justify-between border-t border-zinc-900 pt-3 text-zinc-500">
-                  <span>
-                    Favoritos
-                  </span>
-
-                  <span className="font-medium text-zinc-300">
-                    {
-                      favorites.length
-                    }
-                  </span>
-                </div>
-              </div>
-            </SidebarSection>
           </aside>
         </div>
       </div>
     </main>
+  );
+}
+
+function ReviewGrid({
+  reviews,
+}: {
+  reviews:
+    (ReviewRow &
+      ArtworkFields)[];
+}) {
+  if (
+    reviews.length ===
+    0
+  ) {
+    return (
+      <p className="py-10 text-center text-sm text-zinc-600">
+        Todavía no hay reviews.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+      {reviews.map(
+        (
+          review
+        ) => (
+          <ProfileReviewModal
+            key={
+              review.id
+            }
+            reviewId={
+              review.id
+            }
+            mediaType={
+              review.media_type
+            }
+            title={
+              review.title
+            }
+            coverUrl={
+              review.cover_url
+            }
+            posterPositionX={
+              review.poster_position_x
+            }
+            posterPositionY={
+              review.poster_position_y
+            }
+            posterZoom={
+              review.poster_zoom
+            }
+            createdAt={
+              review.created_at
+            }
+            variant="grid"
+          />
+        )
+      )}
+    </div>
   );
 }
 
@@ -1429,10 +1263,10 @@ function MobileTabLink({
       scroll={
         false
       }
-      className={`relative flex min-h-[52px] items-center justify-center px-2 text-center text-[13px] font-medium leading-4 transition ${
+      className={`relative flex min-h-[52px] items-center justify-center px-1 text-xs font-medium ${
         active
-          ? "text-zinc-100"
-          : "text-zinc-600 hover:text-zinc-300"
+          ? "text-white"
+          : "text-zinc-600"
       }`}
     >
       {
@@ -1440,26 +1274,9 @@ function MobileTabLink({
       }
 
       {active && (
-        <span className="absolute inset-x-0 bottom-0 h-[2px] bg-fuchsia-500" />
+        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-fuchsia-500" />
       )}
     </Link>
-  );
-}
-
-function MobileSectionTitle({
-  children,
-}: {
-  children:
-    ReactNode;
-}) {
-  return (
-    <div className="mb-4 border-b border-zinc-800 pb-2.5">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-        {
-          children
-        }
-      </h2>
-    </div>
   );
 }
 
@@ -1481,7 +1298,7 @@ function PendingGrid({
   }
 
   return (
-    <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
+    <div className="grid grid-cols-4 gap-2.5">
       {items.map(
         (
           item
@@ -1494,10 +1311,9 @@ function PendingGrid({
               item.media_type,
               item.external_id
             )}
-            className="group min-w-0"
           >
             <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
-              {item.cover_url ? (
+              {item.cover_url && (
                 <Image
                   src={
                     item.cover_url
@@ -1513,22 +1329,11 @@ function PendingGrid({
                     )
                   }
                   className="object-cover"
-                  style={{
-                    objectPosition:
-                      `${item.poster_position_x ?? 50}% ${item.poster_position_y ?? 50}%`,
-
-                    transform:
-                      `scale(${item.poster_zoom ?? 1})`,
-                  }}
                 />
-              ) : (
-                <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-zinc-600">
-                  Sin portada
-                </div>
               )}
             </div>
 
-            <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-zinc-500">
+            <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
               {
                 item.title
               }
@@ -1552,8 +1357,8 @@ function SidebarSection({
 }) {
   return (
     <section>
-      <div className="border-b border-zinc-800 pb-2.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      <div className="border-b border-zinc-800 pb-2">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {
             title
           }
@@ -1584,22 +1389,18 @@ function StatRow({
     number;
 }) {
   return (
-    <div className="flex items-center justify-between py-2.5">
+    <div className="flex items-center justify-between py-2">
       <div className="flex items-center gap-2 text-sm text-zinc-500">
-        <span className="text-zinc-600">
-          {
-            icon
-          }
-        </span>
+        {
+          icon
+        }
 
-        <span>
-          {
-            label
-          }
-        </span>
+        {
+          label
+        }
       </div>
 
-      <span className="text-sm font-medium tabular-nums text-zinc-300">
+      <span className="text-sm text-zinc-300">
         {
           value
         }

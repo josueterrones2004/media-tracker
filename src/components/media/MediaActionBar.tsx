@@ -1,105 +1,341 @@
 "use client";
 
-export type MediaStatusOption = {
+import {
+  BookOpenCheck,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  Play,
+  X,
+} from "lucide-react";
+import type {
+  ReactNode,
+} from "react";
+
+export interface MediaActionOption {
   value: string;
   label: string;
+
+  icon?: ReactNode;
+
   destructive?: boolean;
-};
+}
 
 interface MediaActionBarProps {
   primaryLabel: string;
 
-  onPrimaryAction:
-    () => void | Promise<void>;
+  primaryActive?: boolean;
 
   primaryDisabled?: boolean;
 
-  statusOptions?: MediaStatusOption[];
-
   activeStatus?:
-    string | null;
-
-  onStatusChange?: (
-    status: string | null
-  ) =>
-    void | Promise<void>;
+    | string
+    | null;
 
   statusDisabled?: boolean;
 
-  message?: string;
+  statusOptions?: MediaActionOption[];
+
+  message?:
+    | string
+    | null;
+
+  onPrimaryAction: () =>
+    void |
+    Promise<void>;
+
+  onStatusChange?: (
+    value: string,
+  ) =>
+    void |
+    Promise<void>;
 }
+
+/* =========================================================
+   PRIMARY ICON
+========================================================= */
+
+function getPrimaryIcon(
+  label: string,
+) {
+  const normalized =
+    label.toLowerCase();
+
+  if (
+    normalized.includes(
+      "vista",
+    ) ||
+    normalized.includes(
+      "rewatch",
+    )
+  ) {
+    return (
+      <Eye size={17} />
+    );
+  }
+
+  if (
+    normalized.includes(
+      "leído",
+    ) ||
+    normalized.includes(
+      "relectura",
+    )
+  ) {
+    return (
+      <BookOpenCheck
+        size={17}
+      />
+    );
+  }
+
+  return (
+    <CheckCircle2
+      size={17}
+    />
+  );
+}
+
+/* =========================================================
+   STATUS ICON
+========================================================= */
+
+function getStatusIcon(
+  option: MediaActionOption,
+) {
+  if (option.icon) {
+    return option.icon;
+  }
+
+  const value =
+    option.value.toUpperCase();
+
+  if (
+    value ===
+    "IN_PROGRESS"
+  ) {
+    return (
+      <Play size={14} />
+    );
+  }
+
+  if (
+    value ===
+    "PENDING"
+  ) {
+    return (
+      <Clock3
+        size={14}
+      />
+    );
+  }
+
+  if (
+    value ===
+      "DROPPED" ||
+    option.destructive
+  ) {
+    return (
+      <X size={14} />
+    );
+  }
+
+  return null;
+}
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function MediaActionBar({
   primaryLabel,
-  onPrimaryAction,
+
+  primaryActive = false,
+
   primaryDisabled = false,
-  statusOptions = [],
+
   activeStatus = null,
-  onStatusChange,
+
   statusDisabled = false,
+
+  statusOptions = [],
+
   message,
+
+  onPrimaryAction,
+  onStatusChange,
 }: MediaActionBarProps) {
   return (
-    <section>
-      <div className="flex flex-col items-start gap-3 xl:flex-row xl:items-center">
-        <button
-          type="button"
-          onClick={() => {
-            void onPrimaryAction();
-          }}
-          disabled={primaryDisabled}
-          className="h-11 rounded-xl bg-fuchsia-500 px-5 text-sm font-medium text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-50"
-        >
+    <div className="w-full">
+      {/* ==================================================
+          PRIMARY
+
+          Mismo lenguaje visual de Películas:
+          gran botón fucsia, ancho completo.
+      ================================================== */}
+
+      <button
+        type="button"
+        disabled={
+          primaryDisabled
+        }
+        onClick={() =>
+          void onPrimaryAction()
+        }
+        className={`
+          flex h-12 w-full
+          items-center justify-center
+          gap-2
+          rounded-xl
+          border
+          px-4
+          text-sm font-medium
+          transition
+          disabled:cursor-not-allowed
+          disabled:opacity-50
+
+          ${
+            primaryActive
+              ? `
+                border-fuchsia-400/35
+                bg-fuchsia-500/20
+                text-fuchsia-100
+              `
+              : `
+                border-fuchsia-400/20
+                bg-fuchsia-500/15
+                text-fuchsia-200
+                hover:border-fuchsia-400/35
+                hover:bg-fuchsia-500/20
+                hover:text-fuchsia-100
+              `
+          }
+        `}
+      >
+        {getPrimaryIcon(
+          primaryLabel,
+        )}
+
+        <span>
           {primaryLabel}
-        </button>
+        </span>
+      </button>
 
-        {statusOptions.length > 0 &&
-          onStatusChange && (
-            <div className="flex max-w-full overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/70 p-1">
-              {statusOptions.map(
-                (option) => {
-                  const active =
-                    activeStatus ===
-                    option.value;
+      {/* ==================================================
+          SECONDARY STATES
+      ================================================== */}
 
-                  const activeClass =
-                    option.destructive
-                      ? "bg-red-500/10 text-red-400 shadow-sm"
-                      : "bg-fuchsia-500/15 text-fuchsia-300 shadow-sm";
+      {statusOptions.length >
+      0 ? (
+        <div
+          className={`
+            mt-2.5 grid gap-2
 
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={active}
-                      disabled={statusDisabled}
-                      onClick={() => {
-                        void onStatusChange(
-                          active
-                            ? null
-                            : option.value
-                        );
-                      }}
-                      className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-sm transition ${
-                        active
-                          ? activeClass
-                          : "text-zinc-500 hover:bg-zinc-800/70 hover:text-zinc-300"
-                      } disabled:cursor-not-allowed disabled:opacity-50`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                }
-              )}
-            </div>
+            ${
+              statusOptions.length ===
+              1
+                ? "grid-cols-1"
+                : statusOptions.length ===
+                    2
+                  ? "grid-cols-2"
+                  : "grid-cols-3"
+            }
+          `}
+        >
+          {statusOptions.map(
+            (option) => {
+              const active =
+                activeStatus ===
+                option.value;
+
+              const destructive =
+                Boolean(
+                  option.destructive,
+                );
+
+              return (
+                <button
+                  key={
+                    option.value
+                  }
+                  type="button"
+                  disabled={
+                    statusDisabled
+                  }
+                  onClick={() => {
+                    if (
+                      !onStatusChange
+                    ) {
+                      return;
+                    }
+
+                    void onStatusChange(
+                      option.value,
+                    );
+                  }}
+                  className={`
+                    flex h-12 min-w-0
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    border
+                    px-2
+                    text-xs
+                    font-medium
+                    transition
+
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+
+                    ${
+                      active &&
+                      destructive
+                        ? `
+                          border-red-400/25
+                          bg-red-500/10
+                          text-red-300
+                        `
+                        : active
+                          ? `
+                            border-fuchsia-400/25
+                            bg-fuchsia-500/10
+                            text-fuchsia-200
+                          `
+                          : `
+                            border-white/[0.04]
+                            bg-white/[0.025]
+                            text-zinc-500
+                            hover:border-white/[0.09]
+                            hover:bg-white/[0.045]
+                            hover:text-zinc-300
+                          `
+                    }
+                  `}
+                >
+                  <span
+                    className="shrink-0"
+                  >
+                    {getStatusIcon(
+                      option,
+                    )}
+                  </span>
+
+                  <span className="truncate">
+                    {option.label}
+                  </span>
+                </button>
+              );
+            },
           )}
-      </div>
+        </div>
+      ) : null}
 
-      {message && (
-        <p className="mt-3 text-sm text-zinc-500">
+      {message ? (
+        <p className="mt-2.5 text-xs leading-5 text-zinc-500">
           {message}
         </p>
-      )}
-    </section>
+      ) : null}
+    </div>
   );
 }

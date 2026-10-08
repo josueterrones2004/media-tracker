@@ -6,13 +6,51 @@ import {
   redirect,
 } from "next/navigation";
 
-import MediaAdminClient from "./MediaAdminClient";
+import MediaAdminClient, {
+  type MediaAdminInitialSelection,
+} from "./MediaAdminClient";
 
 import {
   createClient,
 } from "@/lib/supabase/server";
 
-export default async function AdminMediaPage() {
+type MediaKind =
+  | "movie"
+  | "series"
+  | "game"
+  | "book";
+
+interface AdminMediaPageProps {
+  searchParams: Promise<{
+    kind?: string;
+    id?: string;
+    title?: string;
+    image?: string;
+    year?: string;
+    href?: string;
+  }>;
+}
+
+function isMediaKind(
+  value:
+    string |
+    undefined
+): value is MediaKind {
+  return (
+    value ===
+      "movie" ||
+    value ===
+      "series" ||
+    value ===
+      "game" ||
+    value ===
+      "book"
+  );
+}
+
+export default async function AdminMediaPage({
+  searchParams,
+}: AdminMediaPageProps) {
   const supabase =
     await createClient();
 
@@ -60,6 +98,62 @@ export default async function AdminMediaPage() {
     );
   }
 
+  const params =
+    await searchParams;
+
+  let initialSelection:
+    MediaAdminInitialSelection |
+    null =
+    null;
+
+  if (
+    isMediaKind(
+      params.kind
+    ) &&
+    params.id &&
+    params.title
+  ) {
+    const parsedYear =
+      params.year
+        ? Number(
+            params.year
+          )
+        : null;
+
+    initialSelection = {
+      key:
+        `${params.kind}:${params.id}`,
+
+      title:
+        params.title,
+
+      kind:
+        params.kind,
+
+      image:
+        params.image ??
+        null,
+
+      year:
+        parsedYear &&
+        Number.isFinite(
+          parsedYear
+        )
+          ? parsedYear
+          : null,
+
+      href:
+        params.href ??
+        `/${params.kind === "movie"
+          ? "movies"
+          : params.kind === "series"
+            ? "series"
+            : params.kind === "game"
+              ? "games"
+              : "books"}/${params.id}`,
+    };
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1500px] pb-24">
       <div className="mb-6 flex items-start gap-3 sm:mb-8 sm:items-center">
@@ -82,7 +176,11 @@ export default async function AdminMediaPage() {
         </div>
       </div>
 
-      <MediaAdminClient />
+      <MediaAdminClient
+        initialSelection={
+          initialSelection
+        }
+      />
     </main>
   );
 }

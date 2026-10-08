@@ -4,9 +4,9 @@ import {
 
 import Image from "next/image";
 import Link from "next/link";
+import PublicLanding from "@/components/home/PublicLanding";
 
 import DiscoverSection from "@/components/home/DiscoverSection";
-import PublicLanding from "@/components/PublicLanding";
 
 import {
   getDiscoverItems,

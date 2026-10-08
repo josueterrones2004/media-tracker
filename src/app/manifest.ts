@@ -25,10 +25,10 @@ export default function manifest(): MetadataRoute.Manifest {
       "standalone",
 
     background_color:
-      "#09090b",
+      "#162b4d",
 
     theme_color:
-      "#09090b",
+      "#162b4d",
 
     orientation:
       "any",
@@ -41,7 +41,7 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src:
-          "/pwa-icon-192",
+          "/icons/icon-192.png",
 
         sizes:
           "192x192",
@@ -52,9 +52,10 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose:
           "any",
       },
+
       {
         src:
-          "/pwa-icon-512",
+          "/icons/icon-512.png",
 
         sizes:
           "512x512",
@@ -65,9 +66,10 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose:
           "any",
       },
+
       {
         src:
-          "/pwa-icon-512",
+          "/icons/maskable-512.png",
 
         sizes:
           "512x512",

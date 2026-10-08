@@ -7,7 +7,7 @@ function getHeaders() {
 
   if (!token) {
     throw new Error(
-      "Falta TMDB_READ_TOKEN en .env.local"
+      "Falta TMDB_READ_TOKEN en .env.local",
     );
   }
 
@@ -19,6 +19,10 @@ function getHeaders() {
       "application/json",
   };
 }
+
+/* =========================================================
+   TRENDING
+========================================================= */
 
 export type TrendingMedia = {
   id: number;
@@ -57,12 +61,12 @@ type RawTrendingMedia = {
     string;
 
   poster_path?:
-    string |
-    null;
+    | string
+    | null;
 
   backdrop_path?:
-    string |
-    null;
+    | string
+    | null;
 
   overview?:
     string;
@@ -79,8 +83,8 @@ type RawTrendingMedia = {
 
 function getYear(
   value:
-    string |
-    undefined
+    | string
+    | undefined,
 ) {
   if (!value) {
     return null;
@@ -90,16 +94,20 @@ function getYear(
     Number(
       value.slice(
         0,
-        4
-      )
+        4,
+      ),
     );
 
   return Number.isFinite(
-    year
+    year,
   )
     ? year
     : null;
 }
+
+/* =========================================================
+   WEEKLY TRENDING
+========================================================= */
 
 export async function getWeeklyTrending(): Promise<
   TrendingMedia[]
@@ -115,7 +123,7 @@ export async function getWeeklyTrending(): Promise<
           revalidate:
             3600,
         },
-      }
+      },
     );
 
   if (
@@ -125,7 +133,7 @@ export async function getWeeklyTrending(): Promise<
       await response.text();
 
     throw new Error(
-      `Error cargando tendencias de TMDB (${response.status}): ${errorText}`
+      `Error cargando tendencias de TMDB (${response.status}): ${errorText}`,
     );
   }
 
@@ -141,7 +149,7 @@ export async function getWeeklyTrending(): Promise<
   return results
     .filter(
       (
-        item
+        item,
       ) =>
         (
           item.media_type ===
@@ -153,12 +161,12 @@ export async function getWeeklyTrending(): Promise<
           true &&
         Boolean(
           item.poster_path ||
-          item.backdrop_path
-        )
+          item.backdrop_path,
+        ),
     )
     .map(
       (
-        item
+        item,
       ): TrendingMedia => ({
         id:
           item.id,
@@ -193,178 +201,27 @@ export async function getWeeklyTrending(): Promise<
             item.media_type ===
             "movie"
               ? item.release_date
-              : item.first_air_date
+              : item.first_air_date,
           ),
-      })
+      }),
     )
     .slice(
       0,
-      10
+      10,
     );
 }
 
-export async function searchTMDB(
-  query:
-    string
-) {
-  const params =
-    new URLSearchParams({
-      query,
-
-      language:
-        "es-MX",
-
-      include_adult:
-        "false",
-    });
-
-  const response =
-    await fetch(
-      `${TMDB_BASE_URL}/search/multi?${params.toString()}`,
-      {
-        headers:
-          getHeaders(),
-
-        next: {
-          revalidate:
-            3600,
-        },
-      }
-    );
-
-  if (
-    !response.ok
-  ) {
-    const errorText =
-      await response.text();
-
-    throw new Error(
-      `Error consultando TMDB (${response.status}): ${errorText}`
-    );
-  }
-
-  return response.json();
-}
-
-export async function getMovieDetails(
-  id:
-    string
-) {
-  const response =
-    await fetch(
-      `${TMDB_BASE_URL}/movie/${id}?language=es-MX`,
-      {
-        headers:
-          getHeaders(),
-
-        next: {
-          revalidate:
-            3600,
-        },
-      }
-    );
-
-  if (
-    !response.ok
-  ) {
-    const errorText =
-      await response.text();
-
-    throw new Error(
-      `No se pudo cargar la película (${response.status}): ${errorText}`
-    );
-  }
-
-  return response.json();
-}
-
-export async function getSeriesDetails(
-  id:
-    string
-) {
-  const response =
-    await fetch(
-      `${TMDB_BASE_URL}/tv/${id}?language=es-MX`,
-      {
-        headers:
-          getHeaders(),
-
-        next: {
-          revalidate:
-            3600,
-        },
-      }
-    );
-
-  if (
-    !response.ok
-  ) {
-    const errorText =
-      await response.text();
-
-    throw new Error(
-      `No se pudo cargar la serie (${response.status}): ${errorText}`
-    );
-  }
-
-  return response.json();
-}
-
-export async function getSeasonDetails(
-  seriesId:
-    string |
-    number,
-
-  seasonNumber:
-    string |
-    number
-) {
-  const token =
-    process.env.TMDB_READ_TOKEN;
-
-  if (!token) {
-    throw new Error(
-      "TMDB_READ_TOKEN no está configurado"
-    );
-  }
-
-  const response =
-    await fetch(
-      `${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?language=es-MX`,
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`,
-
-          accept:
-            "application/json",
-        },
-
-        next: {
-          revalidate:
-            3600,
-        },
-      }
-    );
-
-  if (
-    !response.ok
-  ) {
-    throw new Error(
-      "Error cargando temporada desde TMDB"
-    );
-  }
-
-  return response.json();
-}
+/* =========================================================
+   WEEKLY TRENDING BY TYPE
+========================================================= */
 
 export async function getWeeklyTrendingByType(
   mediaType:
-    "movie" |
-    "tv",
+    | "movie"
+    | "tv",
 
   limit =
-    12
+    12,
 ): Promise<
   TrendingMedia[]
 > {
@@ -379,7 +236,7 @@ export async function getWeeklyTrendingByType(
           revalidate:
             3600,
         },
-      }
+      },
     );
 
   if (
@@ -389,7 +246,7 @@ export async function getWeeklyTrendingByType(
       await response.text();
 
     throw new Error(
-      `Error cargando tendencias de TMDB (${response.status}): ${errorText}`
+      `Error cargando tendencias de TMDB (${response.status}): ${errorText}`,
     );
   }
 
@@ -405,18 +262,18 @@ export async function getWeeklyTrendingByType(
   return results
     .filter(
       (
-        item
+        item,
       ) =>
         item.adult !==
           true &&
         Boolean(
           item.poster_path ||
-          item.backdrop_path
-        )
+          item.backdrop_path,
+        ),
     )
     .map(
       (
-        item
+        item,
       ): TrendingMedia => ({
         id:
           item.id,
@@ -448,15 +305,196 @@ export async function getWeeklyTrendingByType(
             mediaType ===
             "movie"
               ? item.release_date
-              : item.first_air_date
+              : item.first_air_date,
           ),
-      })
+      }),
     )
     .slice(
       0,
-      limit
+      limit,
     );
 }
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+export async function searchTMDB(
+  query:
+    string,
+) {
+  const params =
+    new URLSearchParams({
+      query,
+
+      language:
+        "es-MX",
+
+      include_adult:
+        "false",
+    });
+
+  const response =
+    await fetch(
+      `${TMDB_BASE_URL}/search/multi?${params.toString()}`,
+      {
+        headers:
+          getHeaders(),
+
+        next: {
+          revalidate:
+            3600,
+        },
+      },
+    );
+
+  if (
+    !response.ok
+  ) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `Error consultando TMDB (${response.status}): ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
+   MOVIE DETAILS
+========================================================= */
+
+export async function getMovieDetails(
+  id:
+    string,
+) {
+  const response =
+    await fetch(
+      `${TMDB_BASE_URL}/movie/${id}?language=es-MX`,
+      {
+        headers:
+          getHeaders(),
+
+        next: {
+          revalidate:
+            3600,
+        },
+      },
+    );
+
+  if (
+    !response.ok
+  ) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `No se pudo cargar la película (${response.status}): ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
+   SERIES DETAILS
+========================================================= */
+
+export async function getSeriesDetails(
+  id:
+    string,
+) {
+  const params =
+    new URLSearchParams({
+      language:
+        "es-MX",
+
+      /*
+       * Necesario para:
+       *
+       * - Reparto
+       * - Equipo
+       *
+       * sin hacer otra petición separada.
+       */
+      append_to_response:
+        "credits",
+    });
+
+  const response =
+    await fetch(
+      `${TMDB_BASE_URL}/tv/${id}?${params.toString()}`,
+      {
+        headers:
+          getHeaders(),
+
+        next: {
+          revalidate:
+            3600,
+        },
+      },
+    );
+
+  if (
+    !response.ok
+  ) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `No se pudo cargar la serie (${response.status}): ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
+   SEASON DETAILS
+========================================================= */
+
+export async function getSeasonDetails(
+  seriesId:
+    | string
+    | number,
+
+  seasonNumber:
+    | string
+    | number,
+) {
+  const response =
+    await fetch(
+      `${TMDB_BASE_URL}/tv/${seriesId}/season/${seasonNumber}?language=es-MX`,
+      {
+        headers:
+          getHeaders(),
+
+        next: {
+          revalidate:
+            3600,
+        },
+      },
+    );
+
+  if (
+    !response.ok
+  ) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `Error cargando temporada desde TMDB (${response.status}): ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
+/* =========================================================
+   IMAGES
+========================================================= */
 
 export type TMDBImage = {
   file_path:
@@ -485,11 +523,11 @@ export type TMDBImagesResponse = {
 
 async function getTMDBImages(
   type:
-    "movie" |
-    "tv",
+    | "movie"
+    | "tv",
 
   id:
-    string
+    string,
 ): Promise<
   TMDBImagesResponse
 > {
@@ -504,14 +542,17 @@ async function getTMDBImages(
           revalidate:
             3600,
         },
-      }
+      },
     );
 
   if (
     !response.ok
   ) {
+    const errorText =
+      await response.text();
+
     throw new Error(
-      "No se pudieron cargar las imágenes de TMDB."
+      `No se pudieron cargar las imágenes de TMDB (${response.status}): ${errorText}`,
     );
   }
 
@@ -520,20 +561,20 @@ async function getTMDBImages(
 
 export function getMovieImages(
   id:
-    string
+    string,
 ) {
   return getTMDBImages(
     "movie",
-    id
+    id,
   );
 }
 
 export function getSeriesImages(
   id:
-    string
+    string,
 ) {
   return getTMDBImages(
     "tv",
-    id
+    id,
   );
 }

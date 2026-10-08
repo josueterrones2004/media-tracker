@@ -323,6 +323,23 @@ function getHeroSlides(
   return slides;
 }
 
+function getItemsByKind(
+  items: DiscoverItem[],
+  kind: DiscoverKind,
+  start = 0,
+  limit = 12
+) {
+  return items
+    .filter(
+      (item) =>
+        item.kind === kind
+    )
+    .slice(
+      start,
+      start + limit
+    );
+}
+
 export default function DiscoverSection({
   items,
 }: {
@@ -374,46 +391,82 @@ export default function DiscoverSection({
         heroSlides.length
       : 0;
 
-  const heroKeys =
-    useMemo(
-      () =>
-        new Set(
-          heroSlides.map(
-            (item) =>
-              item.key
-          )
-        ),
-      [heroSlides]
-    );
+  /*
+   * Cada fuente ya llega ordenada por
+   * tendencia / popularidad.
+   *
+   * Usamos los primeros 12 de cada tipo
+   * para sus respectivas secciones.
+   */
 
-  const discoverPool =
+  const trendingMovies =
     useMemo(
       () =>
-        interleaveItems(
+        getItemsByKind(
           items,
-          48
-        ).filter(
-          (item) =>
-            !heroKeys.has(
-              item.key
-            )
+          "movie"
         ),
-      [
-        items,
-        heroKeys,
-      ]
+      [items]
     );
 
-  const trendingItems =
-    discoverPool.slice(
-      0,
-      12
+  const trendingSeries =
+    useMemo(
+      () =>
+        getItemsByKind(
+          items,
+          "series"
+        ),
+      [items]
     );
+
+  const trendingGames =
+    useMemo(
+      () =>
+        getItemsByKind(
+          items,
+          "game"
+        ),
+      [items]
+    );
+
+  const trendingBooks =
+    useMemo(
+      () =>
+        getItemsByKind(
+          items,
+          "book"
+        ),
+      [items]
+    );
+
+  /*
+   * Para recomendaciones usamos títulos
+   * posteriores al top 12 de cada categoría.
+   *
+   * Así no repetimos exactamente lo mismo
+   * que aparece en Tendencias.
+   */
 
   const recommendedItems =
-    discoverPool.slice(
-      12,
-      24
+    useMemo(
+      () => {
+        const remaining =
+          mixedOrder.flatMap(
+            (kind) =>
+              getItemsByKind(
+                items,
+                kind,
+                12,
+                20
+              )
+          );
+
+        return interleaveItems(
+          remaining,
+          12
+        );
+      },
+      [items]
     );
 
   function goToSlide(
@@ -741,8 +794,6 @@ export default function DiscoverSection({
               </div>
             </Link>
 
-            {/* DESKTOP ARROWS */}
-
             {heroSlides.length >
               1 && (
               <>
@@ -780,10 +831,6 @@ export default function DiscoverSection({
               </>
             )}
           </div>
-
-          {/* ======================================
-              PROGRESO
-          ====================================== */}
 
           {heroSlides.length >
             1 && (
@@ -854,19 +901,74 @@ export default function DiscoverSection({
           TENDENCIAS
       ====================================== */}
 
-      {trendingItems.length >
-        0 && (
+      {(trendingMovies.length >
+        0 ||
+        trendingSeries.length >
+          0 ||
+        trendingGames.length >
+          0 ||
+        trendingBooks.length >
+          0) && (
         <section className="mt-10 min-w-0 sm:mt-12">
-          <DiscoverSectionHeader
-            title="Tendencias"
-            subtitle="Lo que está destacando ahora"
-          />
+          <div className="mb-6 border-b border-zinc-900 pb-3">
+            <h2 className="text-[14px] font-semibold uppercase tracking-[0.17em] text-zinc-200 sm:text-[15px]">
+              Tendencias
+            </h2>
 
-          <MediaRail
-            items={
-              trendingItems
-            }
-          />
+            <p className="mt-1 text-[13px] text-zinc-500 sm:text-sm">
+              Lo más popular de cada categoría
+            </p>
+          </div>
+
+          <div className="space-y-9">
+            {trendingMovies.length >
+              0 && (
+              <TrendCategory
+                kind="movie"
+                title="Películas en tendencia"
+                subtitle="Las películas que más están destacando ahora"
+                items={
+                  trendingMovies
+                }
+              />
+            )}
+
+            {trendingSeries.length >
+              0 && (
+              <TrendCategory
+                kind="series"
+                title="Series en tendencia"
+                subtitle="Las series que están dando de qué hablar"
+                items={
+                  trendingSeries
+                }
+              />
+            )}
+
+            {trendingGames.length >
+              0 && (
+              <TrendCategory
+                kind="game"
+                title="Juegos en tendencia"
+                subtitle="Los juegos más populares del momento"
+                items={
+                  trendingGames
+                }
+              />
+            )}
+
+            {trendingBooks.length >
+              0 && (
+              <TrendCategory
+                kind="book"
+                title="Libros populares"
+                subtitle="Los libros que más se están descubriendo"
+                items={
+                  trendingBooks
+                }
+              />
+            )}
+          </div>
         </section>
       )}
 
@@ -878,8 +980,8 @@ export default function DiscoverSection({
         0 && (
         <section className="mt-10 min-w-0 sm:mt-12">
           <DiscoverSectionHeader
-            title="Recomendaciones"
-            subtitle="Más títulos que podrían interesarte"
+            title="Más para descubrir"
+            subtitle="Otros títulos que podrían interesarte"
           />
 
           <MediaRail
@@ -889,13 +991,6 @@ export default function DiscoverSection({
           />
         </section>
       )}
-
-      {/*
-        IMPORTANTE:
-        style normal, NO style jsx.
-        Así styled-jsx no añade clases jsx-xxxx
-        al HTML renderizado.
-      */}
 
       <style>{`
         @keyframes heroProgress {
@@ -908,6 +1003,63 @@ export default function DiscoverSection({
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+function TrendCategory({
+  kind,
+  title,
+  subtitle,
+  items,
+}: {
+  kind: DiscoverKind;
+  title: string;
+  subtitle: string;
+  items: DiscoverItem[];
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-3 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400">
+              <KindIcon
+                kind={
+                  kind
+                }
+              />
+            </span>
+
+            <h3 className="truncate text-sm font-semibold text-zinc-200 sm:text-base">
+              {title}
+            </h3>
+          </div>
+
+          <p className="mt-1 pl-9 text-xs text-zinc-600 sm:text-[13px]">
+            {subtitle}
+          </p>
+        </div>
+
+        <Link
+          href={
+            kind === "movie"
+              ? "/movies"
+              : kind === "series"
+                ? "/series"
+                : kind === "game"
+                  ? "/games"
+                  : "/books"
+          }
+          className="shrink-0 text-xs font-medium text-zinc-500 transition hover:text-zinc-200"
+        >
+          Ver todo
+        </Link>
+      </div>
+
+      <MediaRail
+        items={items}
+      />
     </div>
   );
 }

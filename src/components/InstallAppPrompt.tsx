@@ -124,12 +124,16 @@ function recentlyDismissed() {
         DISMISS_KEY
       );
 
-    if (!stored) {
+    if (
+      !stored
+    ) {
       return false;
     }
 
     const dismissedAt =
-      Number(stored);
+      Number(
+        stored
+      );
 
     if (
       Number.isNaN(
@@ -167,13 +171,17 @@ export default function InstallAppPrompt() {
     visible,
     setVisible,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     isIOS,
     setIsIOS,
   ] =
-    useState(false);
+    useState(
+      false
+    );
 
   const [
     installPrompt,
@@ -182,124 +190,133 @@ export default function InstallAppPrompt() {
     useState<
       BeforeInstallPromptEvent |
       null
-    >(null);
+    >(
+      null
+    );
 
-  useEffect(() => {
-    if (
-      isStandalone() ||
-      recentlyDismissed()
-    ) {
-      return;
-    }
-
-    if (
-      !detectMobile()
-    ) {
-      return;
-    }
-
-    let showTimer:
-      | number
-      | null =
-      null;
-
-    const ios =
-      detectIOS();
-
-    if (ios) {
-      showTimer =
-        window.setTimeout(
-          () => {
-            setIsIOS(
-              true
-            );
-
-            setVisible(
-              true
-            );
-          },
-          1200
-        );
-    }
-
-    function handleBeforeInstallPrompt(
-      event:
-        Event
-    ) {
-      if (ios) {
+  useEffect(
+    () => {
+      if (
+        isStandalone() ||
+        recentlyDismissed()
+      ) {
         return;
       }
 
-      const promptEvent =
-        event as BeforeInstallPromptEvent;
+      if (
+        !detectMobile()
+      ) {
+        return;
+      }
 
-      promptEvent.preventDefault();
+      let showTimer:
+        | number
+        | null =
+        null;
 
-      setInstallPrompt(
-        promptEvent
-      );
+      const ios =
+        detectIOS();
 
       if (
-        showTimer !==
-        null
+        ios
       ) {
-        window.clearTimeout(
-          showTimer
+        showTimer =
+          window.setTimeout(
+            () => {
+              setIsIOS(
+                true
+              );
+
+              setVisible(
+                true
+              );
+            },
+            1200
+          );
+      }
+
+      function handleBeforeInstallPrompt(
+        event:
+          Event
+      ) {
+        if (
+          ios
+        ) {
+          return;
+        }
+
+        const promptEvent =
+          event as BeforeInstallPromptEvent;
+
+        promptEvent.preventDefault();
+
+        setInstallPrompt(
+          promptEvent
+        );
+
+        if (
+          showTimer !==
+          null
+        ) {
+          window.clearTimeout(
+            showTimer
+          );
+        }
+
+        showTimer =
+          window.setTimeout(
+            () => {
+              setVisible(
+                true
+              );
+            },
+            1200
+          );
+      }
+
+      function handleInstalled() {
+        setVisible(
+          false
+        );
+
+        setInstallPrompt(
+          null
         );
       }
 
-      showTimer =
-        window.setTimeout(
-          () => {
-            setVisible(
-              true
-            );
-          },
-          1200
-        );
-    }
-
-    function handleInstalled() {
-      setVisible(
-        false
-      );
-
-      setInstallPrompt(
-        null
-      );
-    }
-
-    window.addEventListener(
-      "beforeinstallprompt",
-      handleBeforeInstallPrompt
-    );
-
-    window.addEventListener(
-      "appinstalled",
-      handleInstalled
-    );
-
-    return () => {
-      if (
-        showTimer !==
-        null
-      ) {
-        window.clearTimeout(
-          showTimer
-        );
-      }
-
-      window.removeEventListener(
+      window.addEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt
       );
 
-      window.removeEventListener(
+      window.addEventListener(
         "appinstalled",
         handleInstalled
       );
-    };
-  }, []);
+
+      return () => {
+        if (
+          showTimer !==
+          null
+        ) {
+          window.clearTimeout(
+            showTimer
+          );
+        }
+
+        window.removeEventListener(
+          "beforeinstallprompt",
+          handleBeforeInstallPrompt
+        );
+
+        window.removeEventListener(
+          "appinstalled",
+          handleInstalled
+        );
+      };
+    },
+    []
+  );
 
   function dismiss() {
     saveDismissal();
@@ -350,13 +367,17 @@ export default function InstallAppPrompt() {
     }
   }
 
-  if (!visible) {
+  if (
+    !visible
+  ) {
     return null;
   }
 
-  if (isIOS) {
+  if (
+    isIOS
+  ) {
     return (
-      <div className="fixed inset-x-4 bottom-4 z-[160] mx-auto max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 sm:bottom-6 sm:left-auto sm:right-6 sm:mx-0">
+      <div className="fixed inset-x-4 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[180] mx-auto max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 lg:bottom-6 lg:left-auto lg:right-6 lg:mx-0">
         <div className="relative p-5">
           <button
             type="button"
@@ -367,7 +388,9 @@ export default function InstallAppPrompt() {
             aria-label="Cerrar"
           >
             <X
-              size={18}
+              size={
+                18
+              }
             />
           </button>
 
@@ -390,7 +413,9 @@ export default function InstallAppPrompt() {
               number="1"
               icon={
                 <Share
-                  size={19}
+                  size={
+                    19
+                  }
                 />
               }
             >
@@ -405,7 +430,9 @@ export default function InstallAppPrompt() {
               number="2"
               icon={
                 <SquarePlus
-                  size={19}
+                  size={
+                    19
+                  }
                 />
               }
             >
@@ -420,7 +447,9 @@ export default function InstallAppPrompt() {
               number="3"
               icon={
                 <Download
-                  size={19}
+                  size={
+                    19
+                  }
                 />
               }
             >
@@ -455,7 +484,7 @@ export default function InstallAppPrompt() {
   }
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-[160] mx-auto max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 sm:bottom-6 sm:left-auto sm:right-6 sm:mx-0">
+    <div className="fixed inset-x-4 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[180] mx-auto max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/50 lg:bottom-6 lg:left-auto lg:right-6 lg:mx-0">
       <div className="relative p-5">
         <button
           type="button"
@@ -466,14 +495,18 @@ export default function InstallAppPrompt() {
           aria-label="Cerrar"
         >
           <X
-            size={18}
+            size={
+              18
+            }
           />
         </button>
 
         <div className="flex items-start gap-4 pr-8">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fuchsia-500/10 text-fuchsia-400">
             <Download
-              size={23}
+              size={
+                23
+              }
             />
           </div>
 
@@ -535,15 +568,21 @@ function GuideStep({
   return (
     <div className="flex items-center gap-3 rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-3">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-zinc-400">
-        {icon}
+        {
+          icon
+        }
       </div>
 
       <div className="min-w-0 flex-1 text-sm leading-5 text-zinc-500">
-        {children}
+        {
+          children
+        }
       </div>
 
       <span className="text-xs font-semibold text-zinc-700">
-        {number}
+        {
+          number
+        }
       </span>
     </div>
   );

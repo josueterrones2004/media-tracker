@@ -4,13 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
+  BookOpen,
   ChevronDown,
+  Film,
+  Gamepad2,
   ImageIcon,
+  Library,
   LogOut,
-  Menu,
   ShieldCheck,
+  Tv,
   UserRound,
-  X,
 } from "lucide-react";
 
 import {
@@ -26,6 +29,7 @@ import {
 import BugReportButton from "@/components/BugReportButton";
 import GlobalSearch from "@/components/GlobalSearch";
 import InstallAppPrompt from "@/components/InstallAppPrompt";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import NotificationsButton from "@/components/NotificationsButton";
 
 import {
@@ -66,30 +70,49 @@ interface AppShellProps {
     | null;
 }
 
-const navigation = [
+const desktopLibraryItems = [
   {
-    href: "/",
-    label: "Inicio",
+    href:
+      "/movies",
+
+    label:
+      "Películas",
+
+    icon:
+      Film,
   },
+
   {
-    href: "/games",
-    label: "Juegos",
+    href:
+      "/series",
+
+    label:
+      "Series",
+
+    icon:
+      Tv,
   },
+
   {
-    href: "/movies",
-    label: "Películas",
+    href:
+      "/games",
+
+    label:
+      "Juegos",
+
+    icon:
+      Gamepad2,
   },
+
   {
-    href: "/series",
-    label: "Series",
-  },
-  {
-    href: "/books",
-    label: "Libros",
-  },
-  {
-    href: "/social",
-    label: "Social",
+    href:
+      "/books",
+
+    label:
+      "Libros",
+
+    icon:
+      BookOpen,
   },
 ];
 
@@ -125,7 +148,9 @@ function isMediaDetailRoute(
 ) {
   const segments =
     pathname
-      .split("/")
+      .split(
+        "/"
+      )
       .filter(
         Boolean
       );
@@ -185,16 +210,16 @@ export default function AppShell({
     );
 
   const [
-    mobileMenuOpen,
-    setMobileMenuOpen,
+    profileMenuOpen,
+    setProfileMenuOpen,
   ] =
     useState(
       false
     );
 
   const [
-    profileMenuOpen,
-    setProfileMenuOpen,
+    desktopLibraryOpen,
+    setDesktopLibraryOpen,
   ] =
     useState(
       false
@@ -218,7 +243,9 @@ export default function AppShell({
         "/profile/"
       ) &&
       pathname
-        .split("/")
+        .split(
+          "/"
+        )
         .filter(
           Boolean
         ).length ===
@@ -235,6 +262,34 @@ export default function AppShell({
     profile?.display_name ??
     profile?.username ??
     "Usuario";
+
+  const libraryActive =
+    authenticated &&
+    [
+      "/movies",
+      "/series",
+      "/games",
+      "/books",
+    ].some(
+      (
+        route
+      ) =>
+        isNavigationActive(
+          pathname,
+          route
+        )
+    );
+
+  const socialActive =
+    authenticated &&
+    isNavigationActive(
+      pathname,
+      "/social"
+    );
+
+  const homeActive =
+    pathname ===
+    "/";
 
   async function handleLogout() {
     if (
@@ -267,578 +322,494 @@ export default function AppShell({
       return;
     }
 
-    setMobileMenuOpen(
-      false
-    );
-
     setProfileMenuOpen(
       false
     );
 
+    setDesktopLibraryOpen(
+      false
+    );
+
+    /*
+     * IMPORTANTE:
+     * cerrar sesión vuelve a la Home pública.
+     */
     router.replace(
-      "/auth"
+      "/"
     );
 
     router.refresh();
   }
 
+  /*
+   * /auth sí sigue siendo una pantalla
+   * independiente.
+   */
   if (
     pathname.startsWith(
       "/auth"
-    ) ||
-    !authenticated
+    )
   ) {
     return (
       <main className="min-h-screen">
-        {children}
+        {
+          children
+        }
       </main>
     );
   }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="sticky top-0 z-[100] border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
+      <header className="relative z-[100] border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl lg:sticky lg:top-0">
         {/* DESKTOP */}
 
-        <div className="hidden h-[70px] xl:block">
-          <div className="mx-auto flex h-full w-full max-w-[1700px] items-center gap-4 px-6 2xl:gap-7">
+        <div className="hidden h-[70px] lg:block">
+          <div className="mx-auto flex h-full w-full max-w-[1700px] items-center gap-3 px-5 xl:gap-5 xl:px-6">
             <Link
               href="/"
-              onClick={() =>
+              onClick={() => {
                 setProfileMenuOpen(
                   false
-                )
-              }
-              className="shrink-0 text-xl font-bold tracking-tight text-fuchsia-400"
+                );
+
+                setDesktopLibraryOpen(
+                  false
+                );
+              }}
+              className="shrink-0 text-lg font-bold tracking-tight text-fuchsia-400 xl:text-xl"
             >
               Media Tracker
             </Link>
 
-            <nav className="flex shrink-0 items-center gap-0.5 2xl:gap-1">
-              {navigation.map(
-                (
-                  item
-                ) => {
-                  const active =
-                    isNavigationActive(
-                      pathname,
-                      item.href
-                    );
+            <nav className="flex shrink-0 items-center gap-1">
+              <Link
+                href="/"
+                onClick={() => {
+                  setDesktopLibraryOpen(
+                    false
+                  );
 
-                  return (
-                    <Link
-                      key={
-                        item.href
+                  setProfileMenuOpen(
+                    false
+                  );
+                }}
+                className={`rounded-lg px-3 py-2 text-sm transition ${
+                  homeActive
+                    ? "bg-fuchsia-500/10 text-fuchsia-300"
+                    : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+                }`}
+              >
+                Inicio
+              </Link>
+
+              {authenticated && (
+                <>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileMenuOpen(
+                          false
+                        );
+
+                        setDesktopLibraryOpen(
+                          (
+                            current
+                          ) =>
+                            !current
+                        );
+                      }}
+                      aria-expanded={
+                        desktopLibraryOpen
                       }
-                      href={
-                        item.href
-                      }
-                      className={`rounded-lg px-3 py-2 text-sm transition 2xl:px-3.5 ${
-                        active
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                        libraryActive ||
+                        desktopLibraryOpen
                           ? "bg-fuchsia-500/10 text-fuchsia-300"
                           : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
                       }`}
                     >
-                      {
-                        item.label
-                      }
-                    </Link>
-                  );
-                }
-              )}
-            </nav>
-
-            <div className="ml-auto flex min-w-0 items-center gap-2 2xl:gap-3">
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setProfileMenuOpen(
-                      (
-                        current
-                      ) =>
-                        !current
-                    )
-                  }
-                  className="flex h-11 items-center gap-2 rounded-xl px-2 text-zinc-200 transition hover:bg-zinc-900"
-                  aria-label="Abrir menú del perfil"
-                  aria-expanded={
-                    profileMenuOpen
-                  }
-                >
-                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-800">
-                    {profile?.avatar_url ? (
-                      <Image
-                        src={
-                          profile.avatar_url
+                      <Library
+                        size={
+                          16
                         }
-                        alt={
-                          displayName
-                        }
-                        width={
-                          64
-                        }
-                        height={
-                          64
-                        }
-                        unoptimized
-                        className="h-full w-full object-cover"
                       />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-zinc-500">
-                        {getInitial(
-                          profile
-                        )}
-                      </div>
+
+                      Biblioteca
+
+                      <ChevronDown
+                        size={
+                          14
+                        }
+                        className={`transition ${
+                          desktopLibraryOpen
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </button>
+
+                    {desktopLibraryOpen && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Cerrar biblioteca"
+                          onClick={() =>
+                            setDesktopLibraryOpen(
+                              false
+                            )
+                          }
+                          className="fixed inset-0 z-40 cursor-default"
+                        />
+
+                        <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-56 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl">
+                          {desktopLibraryItems.map(
+                            (
+                              item
+                            ) => {
+                              const Icon =
+                                item.icon;
+
+                              const active =
+                                isNavigationActive(
+                                  pathname,
+                                  item.href
+                                );
+
+                              return (
+                                <Link
+                                  key={
+                                    item.href
+                                  }
+                                  href={
+                                    item.href
+                                  }
+                                  onClick={() =>
+                                    setDesktopLibraryOpen(
+                                      false
+                                    )
+                                  }
+                                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                                    active
+                                      ? "bg-fuchsia-500/10 text-fuchsia-300"
+                                      : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                  }`}
+                                >
+                                  <Icon
+                                    size={
+                                      17
+                                    }
+                                  />
+
+                                  {
+                                    item.label
+                                  }
+                                </Link>
+                              );
+                            }
+                          )}
+
+                          <div className="my-1 border-t border-zinc-800" />
+
+                          <Link
+                            href="/profile?tab=pending"
+                            onClick={() =>
+                              setDesktopLibraryOpen(
+                                false
+                              )
+                            }
+                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
+                          >
+                            <Library
+                              size={
+                                17
+                              }
+                            />
+
+                            Pendientes
+                          </Link>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  <span className="max-w-[110px] truncate text-sm font-semibold 2xl:max-w-[150px]">
-                    {
-                      displayName
-                    }
-                  </span>
+                  <Link
+                    href="/social"
+                    onClick={() => {
+                      setDesktopLibraryOpen(
+                        false
+                      );
 
-                  <ChevronDown
-                    size={
-                      14
-                    }
-                    className={`shrink-0 text-zinc-600 transition ${
-                      profileMenuOpen
-                        ? "rotate-180"
-                        : ""
+                      setProfileMenuOpen(
+                        false
+                      );
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm transition ${
+                      socialActive
+                        ? "bg-fuchsia-500/10 text-fuchsia-300"
+                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
                     }`}
-                  />
-                </button>
+                  >
+                    Social
+                  </Link>
+                </>
+              )}
+            </nav>
 
-                {profileMenuOpen && (
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Cerrar menú del perfil"
-                      onClick={() =>
-                        setProfileMenuOpen(
-                          false
-                        )
-                      }
-                      className="fixed inset-0 z-40 cursor-default"
-                    />
-
-                    <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl">
-                      <Link
-                        href="/profile"
-                        onClick={() =>
-                          setProfileMenuOpen(
-                            false
-                          )
-                        }
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
-                      >
-                        <UserRound
-                          size={
-                            17
-                          }
-                        />
-
-                        Perfil
-                      </Link>
-
-                      {profile?.special_role ===
-                        "OWNER" && (
-                        <>
-                          <Link
-                            href="/admin/reports"
-                            onClick={() =>
-                              setProfileMenuOpen(
-                                false
-                              )
-                            }
-                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
-                          >
-                            <ShieldCheck
-                              size={
-                                17
-                              }
-                            />
-
-                            Reportes
-                          </Link>
-
-                          <Link
-                            href="/admin/media"
-                            onClick={() =>
-                              setProfileMenuOpen(
-                                false
-                              )
-                            }
-                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
-                          >
-                            <ImageIcon
-                              size={
-                                17
-                              }
-                            />
-
-                            Editar portadas
-                          </Link>
-                        </>
-                      )}
-
-                      <div className="my-1 border-t border-zinc-800" />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleLogout();
-                        }}
-                        disabled={
-                          loggingOut
-                        }
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-red-400 disabled:opacity-50"
-                      >
-                        <LogOut
-                          size={
-                            17
-                          }
-                        />
-
-                        {loggingOut
-                          ? "Cerrando..."
-                          : "Cerrar sesión"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
+            <div className="ml-auto flex min-w-0 items-center gap-2 xl:gap-3">
               <Suspense
                 fallback={
-                  <div className="h-11 w-[280px] rounded-xl border border-zinc-800 bg-zinc-900/70 2xl:w-[420px]" />
+                  <div className="h-11 w-[230px] rounded-xl border border-zinc-800 bg-zinc-900/70 xl:w-[340px] 2xl:w-[420px]" />
                 }
               >
-                <GlobalSearch className="w-[280px] 2xl:w-[420px]" />
+                <GlobalSearch className="w-[230px] xl:w-[340px] 2xl:w-[420px]" />
               </Suspense>
 
-              <NotificationsButton />
+              {authenticated ? (
+                <>
+                  <NotificationsButton />
+
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDesktopLibraryOpen(
+                          false
+                        );
+
+                        setProfileMenuOpen(
+                          (
+                            current
+                          ) =>
+                            !current
+                        );
+                      }}
+                      className="flex h-11 items-center gap-2 rounded-xl px-2 text-zinc-200 transition hover:bg-zinc-900"
+                      aria-label="Abrir menú del perfil"
+                      aria-expanded={
+                        profileMenuOpen
+                      }
+                    >
+                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-800">
+                        {profile?.avatar_url ? (
+                          <Image
+                            src={
+                              profile.avatar_url
+                            }
+                            alt={
+                              displayName
+                            }
+                            width={
+                              64
+                            }
+                            height={
+                              64
+                            }
+                            unoptimized
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-zinc-500">
+                            {getInitial(
+                              profile
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <span className="hidden max-w-[120px] truncate text-sm font-semibold xl:block">
+                        {
+                          displayName
+                        }
+                      </span>
+
+                      <ChevronDown
+                        size={
+                          14
+                        }
+                        className={`hidden shrink-0 text-zinc-600 transition xl:block ${
+                          profileMenuOpen
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </button>
+
+                    {profileMenuOpen && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Cerrar menú del perfil"
+                          onClick={() =>
+                            setProfileMenuOpen(
+                              false
+                            )
+                          }
+                          className="fixed inset-0 z-40 cursor-default"
+                        />
+
+                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl">
+                          <Link
+                            href="/profile"
+                            onClick={() =>
+                              setProfileMenuOpen(
+                                false
+                              )
+                            }
+                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+                          >
+                            <UserRound
+                              size={
+                                17
+                              }
+                            />
+
+                            Perfil
+                          </Link>
+
+                          {profile?.special_role ===
+                            "OWNER" && (
+                            <>
+                              <Link
+                                href="/admin/reports"
+                                onClick={() =>
+                                  setProfileMenuOpen(
+                                    false
+                                  )
+                                }
+                                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+                              >
+                                <ShieldCheck
+                                  size={
+                                    17
+                                  }
+                                />
+
+                                Reportes
+                              </Link>
+
+                              <Link
+                                href="/admin/media"
+                                onClick={() =>
+                                  setProfileMenuOpen(
+                                    false
+                                  )
+                                }
+                                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+                              >
+                                <ImageIcon
+                                  size={
+                                    17
+                                  }
+                                />
+
+                                Editar portadas
+                              </Link>
+                            </>
+                          )}
+
+                          <div className="my-1 border-t border-zinc-800" />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleLogout();
+                            }}
+                            disabled={
+                              loggingOut
+                            }
+                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-red-400 disabled:opacity-50"
+                          >
+                            <LogOut
+                              size={
+                                17
+                              }
+                            />
+
+                            {loggingOut
+                              ? "Cerrando..."
+                              : "Cerrar sesión"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/auth?mode=login"
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
+                  >
+                    Iniciar sesión
+                  </Link>
+
+                  <Link
+                    href="/auth?mode=register"
+                    className="rounded-xl bg-fuchsia-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-fuchsia-400"
+                  >
+                    Registrarse
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* MOBILE / TABLET */}
+        {/* MOBILE */}
 
-        <div className="flex h-[70px] items-center justify-between px-4 xl:hidden">
+        <div className="flex h-[58px] items-center justify-between px-4 lg:hidden">
           <Link
             href="/"
-            onClick={() =>
-              setMobileMenuOpen(
-                false
-              )
-            }
             className="text-lg font-bold tracking-tight text-fuchsia-400"
           >
             Media Tracker
           </Link>
 
-          <div className="flex items-center gap-2">
-            <NotificationsButton
-              onNavigate={() =>
-                setMobileMenuOpen(
-                  false
-                )
-              }
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                setMobileMenuOpen(
-                  (
-                    current
-                  ) =>
-                    !current
-                )
-              }
-              aria-label={
-                mobileMenuOpen
-                  ? "Cerrar menú"
-                  : "Abrir menú"
-              }
-              aria-expanded={
-                mobileMenuOpen
-              }
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          {authenticated ? (
+            <NotificationsButton />
+          ) : (
+            <Link
+              href="/auth?mode=login"
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300"
             >
-              {mobileMenuOpen ? (
-                <X
-                  size={
-                    21
-                  }
-                />
-              ) : (
-                <Menu
-                  size={
-                    21
-                  }
-                />
-              )}
-            </button>
-          </div>
+              Entrar
+            </Link>
+          )}
         </div>
-
-        {mobileMenuOpen && (
-          <>
-            <button
-              type="button"
-              aria-label="Cerrar menú"
-              onClick={() =>
-                setMobileMenuOpen(
-                  false
-                )
-              }
-              className="fixed inset-0 top-[70px] z-40 bg-black/70 xl:hidden"
-            />
-
-            <div className="fixed inset-x-0 top-[70px] z-50 max-h-[calc(100dvh-70px)] overflow-y-auto border-b border-zinc-800 bg-zinc-950 p-4 shadow-2xl xl:hidden">
-              <Link
-                href="/profile"
-                onClick={() =>
-                  setMobileMenuOpen(
-                    false
-                  )
-                }
-                className="flex items-center gap-3 border-b border-zinc-800 pb-4 transition hover:opacity-80"
-              >
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800">
-                  {profile?.avatar_url ? (
-                    <Image
-                      src={
-                        profile.avatar_url
-                      }
-                      alt={
-                        displayName
-                      }
-                      width={
-                        96
-                      }
-                      height={
-                        96
-                      }
-                      unoptimized
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center font-semibold text-zinc-500">
-                      {getInitial(
-                        profile
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-zinc-100">
-                    {
-                      displayName
-                    }
-                  </p>
-
-                  {profile?.username && (
-                    <p className="truncate text-sm text-zinc-600">
-                      @
-                      {
-                        profile.username
-                      }
-                    </p>
-                  )}
-
-                  {profile?.special_role ===
-                    "OWNER" && (
-                    <p className="mt-0.5 text-[11px] font-medium text-fuchsia-400">
-                      Owner
-                    </p>
-                  )}
-
-                  {profile?.special_role ===
-                    "BETA_TESTER" && (
-                    <p className="mt-0.5 text-[11px] text-zinc-500">
-                      Beta Tester
-                    </p>
-                  )}
-                </div>
-              </Link>
-
-              <Suspense
-                fallback={
-                  <div className="mb-4 mt-4 h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900" />
-                }
-              >
-                <GlobalSearch
-                  className="mb-4 mt-4 w-full"
-                  onNavigate={() =>
-                    setMobileMenuOpen(
-                      false
-                    )
-                  }
-                />
-              </Suspense>
-
-              <nav className="space-y-1">
-                {navigation.map(
-                  (
-                    item
-                  ) => {
-                    const active =
-                      isNavigationActive(
-                        pathname,
-                        item.href
-                      );
-
-                    return (
-                      <Link
-                        key={
-                          item.href
-                        }
-                        href={
-                          item.href
-                        }
-                        onClick={() =>
-                          setMobileMenuOpen(
-                            false
-                          )
-                        }
-                        className={`block rounded-lg px-3 py-2.5 text-sm transition ${
-                          active
-                            ? "bg-fuchsia-500/10 text-fuchsia-300"
-                            : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                        }`}
-                      >
-                        {
-                          item.label
-                        }
-                      </Link>
-                    );
-                  }
-                )}
-
-                <Link
-                  href="/profile"
-                  onClick={() =>
-                    setMobileMenuOpen(
-                      false
-                    )
-                  }
-                  className={`block rounded-lg px-3 py-2.5 text-sm transition ${
-                    pathname ===
-                      "/profile"
-                      ? "bg-fuchsia-500/10 text-fuchsia-300"
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                  }`}
-                >
-                  Perfil
-                </Link>
-
-                {profile?.special_role ===
-                  "OWNER" && (
-                  <>
-                    <div className="my-2 border-t border-zinc-800" />
-
-                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
-                      Administración
-                    </p>
-
-                    <Link
-                      href="/admin/reports"
-                      onClick={() =>
-                        setMobileMenuOpen(
-                          false
-                        )
-                      }
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                        pathname.startsWith(
-                          "/admin/reports"
-                        )
-                          ? "bg-fuchsia-500/10 text-fuchsia-300"
-                          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                      }`}
-                    >
-                      <ShieldCheck
-                        size={
-                          17
-                        }
-                      />
-
-                      Reportes
-                    </Link>
-
-                    <Link
-                      href="/admin/media"
-                      onClick={() =>
-                        setMobileMenuOpen(
-                          false
-                        )
-                      }
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                        pathname.startsWith(
-                          "/admin/media"
-                        )
-                          ? "bg-fuchsia-500/10 text-fuchsia-300"
-                          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                      }`}
-                    >
-                      <ImageIcon
-                        size={
-                          17
-                        }
-                      />
-
-                      Editar portadas
-                    </Link>
-                  </>
-                )}
-              </nav>
-
-              <div className="mt-4 border-t border-zinc-800 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleLogout();
-                  }}
-                  disabled={
-                    loggingOut
-                  }
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-zinc-900 hover:text-red-400 disabled:opacity-50"
-                >
-                  <LogOut
-                    size={
-                      17
-                    }
-                  />
-
-                  {loggingOut
-                    ? "Cerrando..."
-                    : "Cerrar sesión"}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </header>
 
-      <main
-        className={
-          isFlushRoute
-            ? "min-w-0 p-0"
-            : "min-w-0 p-4 sm:p-6 lg:p-8"
-        }
-      >
-        {
-          children
-        }
-      </main>
+      <div className="pb-[calc(68px+env(safe-area-inset-bottom))] lg:pb-0">
+        <main
+          className={
+            isFlushRoute
+              ? "min-w-0 p-0"
+              : "min-w-0 p-4 sm:p-6 lg:p-8"
+          }
+        >
+          {
+            children
+          }
+        </main>
+      </div>
 
-      <BugReportButton />
+      {authenticated && (
+        <div className="hidden lg:block">
+          <BugReportButton />
+        </div>
+      )}
 
       <InstallAppPrompt />
+
+      <MobileBottomNav
+        profile={
+          profile
+        }
+        authenticated={
+          authenticated
+        }
+      />
     </div>
   );
 }

@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
-import MediaActionBar from "@/components/media/MediaActionBar";
-import StarRating from "@/components/media/StarRating";
+import SeriesActionBar from "@/components/series/SeriesActionBar";
 import { shouldUseOriginalImage } from "@/lib/image-optimization";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,23 +27,16 @@ type SeriesStatus =
   | "PENDING"
   | "IN_PROGRESS";
 
-function isSeriesStatus(
-  value: string
-): value is SeriesStatus {
-  return (
-    value === "PENDING" ||
-    value === "IN_PROGRESS"
-  );
-}
-
 function getToday() {
-  const now = new Date();
+  const now =
+    new Date();
 
-  const local = new Date(
-    now.getTime() -
-      now.getTimezoneOffset() *
-        60_000
-  );
+  const local =
+    new Date(
+      now.getTime() -
+        now.getTimezoneOffset() *
+          60_000,
+    );
 
   return local
     .toISOString()
@@ -48,19 +44,19 @@ function getToday() {
 }
 
 function formatDate(
-  date: string
+  date: string,
 ) {
   return new Intl.DateTimeFormat(
     "es-MX",
     {
-      day: "numeric",
+      day: "2-digit",
       month: "short",
       year: "numeric",
-    }
+    },
   ).format(
     new Date(
-      `${date}T12:00:00`
-    )
+      `${date}T12:00:00`,
+    ),
   );
 }
 
@@ -92,11 +88,14 @@ function EyeToggleIcon({
         d="M4 4 20 20"
         pathLength="1"
         style={{
-          strokeDasharray: 1,
+          strokeDasharray:
+            1,
+
           strokeDashoffset:
             rewatch
               ? 1
               : 0,
+
           transition:
             "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
         }}
@@ -200,6 +199,24 @@ function HeartToggleIcon({
       strokeLinejoin="round"
     >
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
+
+      <path
+        d="m13 6.5-2 4 2 2-2.2 4"
+        pathLength="1"
+        fill="none"
+        style={{
+          strokeDasharray:
+            1,
+
+          strokeDashoffset:
+            liked
+              ? 1
+              : 0,
+
+          transition:
+            "stroke-dashoffset 350ms cubic-bezier(.4,0,.2,1)",
+        }}
+      />
     </svg>
   );
 }
@@ -210,12 +227,10 @@ export default function SeriesActions({
   const router =
     useRouter();
 
-  const [
-    supabase,
-  ] =
+  const [supabase] =
     useState(
       () =>
-        createClient()
+        createClient(),
     );
 
   const [
@@ -252,15 +267,6 @@ export default function SeriesActions({
     useState("");
 
   const [
-    rating,
-    setRating,
-  ] =
-    useState<
-      number |
-      null
-    >(null);
-
-  const [
     liked,
     setLiked,
   ] =
@@ -279,11 +285,17 @@ export default function SeriesActions({
     useState(false);
 
   const [
+    showDate,
+    setShowDate,
+  ] =
+    useState(true);
+
+  const [
     watchedDate,
     setWatchedDate,
   ] =
     useState(
-      getToday()
+      getToday(),
     );
 
   const [
@@ -321,47 +333,47 @@ export default function SeriesActions({
               await Promise.all([
                 supabase
                   .from(
-                    "library_items"
+                    "library_items",
                   )
                   .select(
-                    "status"
+                    "status",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "SERIES"
+                    "SERIES",
                   )
                   .eq(
                     "external_id",
                     String(
-                      show.id
-                    )
+                      show.id,
+                    ),
                   )
                   .maybeSingle(),
 
                 supabase
                   .from(
-                    "reviews"
+                    "reviews",
                   )
                   .select(
-                    "id"
+                    "id",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "SERIES"
+                    "SERIES",
                   )
                   .eq(
                     "external_id",
                     String(
-                      show.id
-                    )
+                      show.id,
+                    ),
                   )
                   .limit(1),
               ]);
@@ -371,7 +383,7 @@ export default function SeriesActions({
             ) {
               console.error(
                 "Error loading series state:",
-                libraryResult.error
+                libraryResult.error,
               );
             }
 
@@ -380,7 +392,7 @@ export default function SeriesActions({
             ) {
               console.error(
                 "Error loading series reviews:",
-                reviewResult.error
+                reviewResult.error,
               );
             }
 
@@ -395,25 +407,31 @@ export default function SeriesActions({
                 .data
                 ?.status;
 
-            setStatus(
+            if (
               loadedStatus ===
-                  "PENDING" ||
-                loadedStatus ===
-                  "IN_PROGRESS"
-                ? loadedStatus
-                : null
-            );
+                "PENDING" ||
+              loadedStatus ===
+                "IN_PROGRESS"
+            ) {
+              setStatus(
+                loadedStatus,
+              );
+            } else {
+              setStatus(
+                null,
+              );
+            }
 
             setHasWatchedBefore(
               Boolean(
                 reviewResult
                   .data
-                  ?.length
-              )
+                  ?.length,
+              ),
             );
           })();
         },
-        0
+        0,
       );
 
     return () => {
@@ -421,7 +439,7 @@ export default function SeriesActions({
         true;
 
       window.clearTimeout(
-        timeout
+        timeout,
       );
     };
   }, [
@@ -443,7 +461,7 @@ export default function SeriesActions({
 
         if (!user) {
           setMessage(
-            "Debes iniciar sesión."
+            "Debes iniciar sesión.",
           );
 
           return;
@@ -457,73 +475,78 @@ export default function SeriesActions({
         } =
           await supabase
             .from(
-              "reviews"
+              "reviews",
             )
             .select(
-              "id"
+              "id",
             )
             .eq(
               "user_id",
-              user.id
+              user.id,
             )
             .eq(
               "media_type",
-              "SERIES"
+              "SERIES",
             )
             .eq(
               "external_id",
               String(
-                show.id
-              )
+                show.id,
+              ),
             )
             .limit(1);
 
         if (error) {
           console.error(
             "Error checking previous series reviews:",
-            error
+            error,
           );
         }
 
         setIsRewatch(
           Boolean(
             previousReviews
-              ?.length
-          )
+              ?.length,
+          ),
         );
 
         setWatchedDate(
-          getToday()
+          getToday(),
         );
 
-        setRating(null);
-        setLiked(true);
+        setLiked(
+          true,
+        );
 
         setContainsSpoilers(
-          false
+          false,
         );
 
-        setReview("");
+        setShowDate(
+          true,
+        );
+
+        setReview(
+          "",
+        );
 
         setShowReview(
-          true
+          true,
         );
       },
       [
         show.id,
         supabase,
-      ]
+      ],
     );
 
   useEffect(() => {
     function handleSeriesCompleted(
-      event:
-        Event
+      event: Event,
     ) {
       const customEvent =
         event as CustomEvent<{
-          seriesId:
-            number;
+          seriesId: number;
         }>;
 
       if (
@@ -539,13 +562,13 @@ export default function SeriesActions({
 
     window.addEventListener(
       "series-completed",
-      handleSeriesCompleted
+      handleSeriesCompleted,
     );
 
     return () => {
       window.removeEventListener(
         "series-completed",
-        handleSeriesCompleted
+        handleSeriesCompleted,
       );
     };
   }, [
@@ -554,8 +577,7 @@ export default function SeriesActions({
   ]);
 
   function getSeriesData(
-    userId:
-      string
+    userId: string,
   ) {
     return {
       user_id:
@@ -566,7 +588,7 @@ export default function SeriesActions({
 
       external_id:
         String(
-          show.id
+          show.id,
         ),
 
       title:
@@ -591,20 +613,60 @@ export default function SeriesActions({
           ? Number(
               show.first_air_date.slice(
                 0,
-                4
-              )
+                4,
+              ),
             )
           : null,
     };
   }
 
+  async function clearLibraryActivity(
+    userId: string,
+  ) {
+    const {
+      error,
+    } =
+      await supabase
+        .from(
+          "activity_events",
+        )
+        .delete()
+        .eq(
+          "user_id",
+          userId,
+        )
+        .eq(
+          "media_type",
+          "SERIES",
+        )
+        .eq(
+          "external_id",
+          String(
+            show.id,
+          ),
+        )
+        .in(
+          "activity_type",
+          [
+            "ADDED_PENDING",
+            "STARTED",
+          ],
+        );
+
+    if (error) {
+      console.error(
+        "Error clearing temporary series activity:",
+        error,
+      );
+    }
+  }
+
   async function createLibraryActivity(
-    userId:
-      string,
+    userId: string,
 
     activityType:
       | "STARTED"
-      | "ADDED_PENDING"
+      | "ADDED_PENDING",
   ) {
     const coverUrl =
       show.poster_path
@@ -616,7 +678,7 @@ export default function SeriesActions({
     } =
       await supabase
         .from(
-          "activity_events"
+          "activity_events",
         )
         .insert({
           user_id:
@@ -630,7 +692,7 @@ export default function SeriesActions({
 
           external_id:
             String(
-              show.id
+              show.id,
             ),
 
           title:
@@ -643,22 +705,30 @@ export default function SeriesActions({
     if (error) {
       console.error(
         "Error creating series activity:",
-        error
+        error,
       );
     }
   }
 
   async function setLibraryStatus(
     newStatus:
-      | SeriesStatus
-      | null
+      SeriesStatus,
   ) {
-    if (loading) {
+    if (
+      loading ||
+      newStatus ===
+        status
+    ) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true,
+    );
+
+    setMessage(
+      "",
+    );
 
     const {
       data: {
@@ -669,60 +739,12 @@ export default function SeriesActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
-      setLoading(false);
-
-      return;
-    }
-
-    if (
-      newStatus ===
-      null
-    ) {
-      const {
-        error,
-      } =
-        await supabase
-          .from(
-            "library_items"
-          )
-          .delete()
-          .eq(
-            "user_id",
-            user.id
-          )
-          .eq(
-            "media_type",
-            "SERIES"
-          )
-          .eq(
-            "external_id",
-            String(
-              show.id
-            )
-          );
-
-      if (error) {
-        setMessage(
-          error.message
-        );
-
-        setLoading(false);
-
-        return;
-      }
-
-      setStatus(null);
-
-      setMessage(
-        "Serie quitada de tu biblioteca."
+      setLoading(
+        false,
       );
-
-      setLoading(false);
-
-      router.refresh();
 
       return;
     }
@@ -732,12 +754,12 @@ export default function SeriesActions({
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .upsert(
           {
             ...getSeriesData(
-              user.id
+              user.id,
             ),
 
             status:
@@ -746,18 +768,24 @@ export default function SeriesActions({
           {
             onConflict:
               "user_id,media_type,external_id",
-          }
+          },
         );
 
     if (error) {
       setMessage(
-        error.message
+        error.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
+
+    await clearLibraryActivity(
+      user.id,
+    );
 
     await createLibraryActivity(
       user.id,
@@ -765,35 +793,46 @@ export default function SeriesActions({
       newStatus ===
         "IN_PROGRESS"
         ? "STARTED"
-        : "ADDED_PENDING"
+        : "ADDED_PENDING",
     );
 
     setStatus(
-      newStatus
+      newStatus,
     );
 
     setMessage(
       newStatus ===
         "IN_PROGRESS"
         ? "Serie marcada como viendo."
-        : "Serie añadida a pendientes."
+        : "Serie añadida a pendientes.",
     );
 
-    setLoading(false);
-
-    router.refresh();
+    setLoading(
+      false,
+    );
   }
 
   async function saveReview() {
+    const cleanReview =
+      review.trim();
+
+    setMessage("");
+
+    if (!cleanReview) {
+      setMessage(
+        "La review es obligatoria.",
+      );
+
+      return;
+    }
+
     if (loading) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
-
-    const cleanReview =
-      review.trim();
+    setLoading(
+      true,
+    );
 
     const {
       data: {
@@ -804,17 +843,19 @@ export default function SeriesActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
 
     const seriesData =
       getSeriesData(
-        user.id
+        user.id,
       );
 
     const {
@@ -826,7 +867,7 @@ export default function SeriesActions({
     } =
       await supabase
         .from(
-          "reviews"
+          "reviews",
         )
         .insert({
           user_id:
@@ -837,17 +878,14 @@ export default function SeriesActions({
 
           external_id:
             String(
-              show.id
+              show.id,
             ),
 
           title:
             show.name,
 
           review_text:
-            cleanReview ||
-            null,
-
-          rating,
+            cleanReview,
 
           liked,
 
@@ -858,7 +896,7 @@ export default function SeriesActions({
             containsSpoilers,
 
           show_consumed_date:
-            true,
+            showDate,
 
           experience:
             isRewatch
@@ -878,16 +916,20 @@ export default function SeriesActions({
             seriesData.release_year,
         })
         .select(
-          "id"
+          "id",
         )
         .single();
 
-    if (reviewError) {
+    if (
+      reviewError
+    ) {
       setMessage(
-        reviewError.message
+        reviewError.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
@@ -901,7 +943,7 @@ export default function SeriesActions({
       } =
         await supabase
           .from(
-            "activity_events"
+            "activity_events",
           )
           .insert({
             user_id:
@@ -915,7 +957,7 @@ export default function SeriesActions({
 
             external_id:
               String(
-                show.id
+                show.id,
               ),
 
             title:
@@ -933,7 +975,7 @@ export default function SeriesActions({
       ) {
         console.error(
           "Error creating series review activity:",
-          activityError
+          activityError,
         );
       }
     }
@@ -944,53 +986,63 @@ export default function SeriesActions({
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .delete()
         .eq(
           "user_id",
-          user.id
+          user.id,
         )
         .eq(
           "media_type",
-          "SERIES"
+          "SERIES",
         )
         .eq(
           "external_id",
           String(
-            show.id
-          )
+            show.id,
+          ),
         );
 
     if (
       deleteError
     ) {
       setMessage(
-        deleteError.message
+        deleteError.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
 
-    setStatus(null);
+    await clearLibraryActivity(
+      user.id,
+    );
+
+    setStatus(
+      null,
+    );
 
     setHasWatchedBefore(
-      true
+      true,
     );
 
     setShowReview(
-      false
+      false,
     );
 
     setMessage(
       isRewatch
         ? "Rewatch de la serie guardado."
-        : "Serie marcada como vista."
+        : "Serie marcada como vista.",
     );
 
-    setLoading(false);
+    setLoading(
+      false,
+    );
 
     router.refresh();
   }
@@ -1003,86 +1055,50 @@ export default function SeriesActions({
   const year =
     show.first_air_date?.slice(
       0,
-      4
+      4,
     );
 
   return (
     <>
-      <MediaActionBar
-        primaryLabel={
-          hasWatchedBefore
-            ? "Registrar rewatch"
-            : "Marcar como vista"
-        }
-        onPrimaryAction={
-          openWatchedModal
-        }
-        primaryDisabled={
-          loading
-        }
-        activeStatus={
-          status
-        }
-        statusDisabled={
-          loading
-        }
-        statusOptions={[
-          {
-            value:
-              "IN_PROGRESS",
-            label:
-              "Viendo",
-          },
-          {
-            value:
-              "PENDING",
-            label:
-              "Pendiente",
-          },
-        ]}
-        onStatusChange={(
-          newStatus
-        ) => {
-          if (
-            newStatus ===
-            null
-          ) {
-            return setLibraryStatus(
-              null
-            );
+      <div className="mt-6">
+        <SeriesActionBar
+          primaryLabel={
+            hasWatchedBefore
+              ? "Registrar rewatch"
+              : "Marcar como vista"
           }
-
-          if (
-            !isSeriesStatus(
-              newStatus
-            )
-          ) {
-            return;
+          onPrimaryAction={
+            openWatchedModal
           }
+          primaryDisabled={
+            loading
+          }
+          activeStatus={
+            status
+          }
+          statusDisabled={
+            loading
+          }
+          onStatusChange={
+            setLibraryStatus
+          }
+          message={
+            message
+          }
+        />
+      </div>
 
-          return setLibraryStatus(
-            newStatus
-          );
-        }}
-        message={
-          message
-        }
-      />
-
-      {showReview && (
+      {showReview ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7">
+          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-7 shadow-2xl">
             <button
               type="button"
               onClick={() =>
                 setShowReview(
-                  false
+                  false,
                 )
               }
-              disabled={
-                loading
-              }
-              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white disabled:opacity-50"
+              className="absolute right-5 top-5 text-3xl leading-none text-zinc-500 transition hover:text-white"
               aria-label="Cerrar"
             >
               ×
@@ -1107,7 +1123,7 @@ export default function SeriesActions({
                       }
                       unoptimized={
                         shouldUseOriginalImage(
-                          poster
+                          poster,
                         )
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
@@ -1120,49 +1136,87 @@ export default function SeriesActions({
                 </div>
               </div>
 
-              <div className="min-w-0 pt-2 md:pt-7">
-                <div className="flex flex-wrap items-baseline gap-3 pr-10">
+              <div className="pt-7">
+                <div className="flex flex-wrap items-baseline gap-3">
                   <h2 className="text-2xl font-bold">
                     {
                       show.name
                     }
                   </h2>
 
-                  {year && (
+                  {year ? (
                     <span className="text-lg text-zinc-500">
                       {
                         year
                       }
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
-                <p className="mt-5 text-sm text-zinc-500">
-                  Vista el{" "}
-                  <span className="text-zinc-300">
-                    {formatDate(
-                      watchedDate
-                    )}
-                  </span>
-                </p>
-
                 <div className="mt-6">
-                  <p className="mb-2 text-sm font-medium text-zinc-300">
-                    Tu puntuación
-                  </p>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowDate(
+                          (
+                            current,
+                          ) =>
+                            !current,
+                        )
+                      }
+                      className="flex items-center gap-3"
+                    >
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-sm border transition ${
+                          showDate
+                            ? "border-zinc-300 bg-zinc-300"
+                            : "border-zinc-500 bg-transparent"
+                        }`}
+                      >
+                        {showDate ? (
+                          <svg
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#111827"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="m5 12 4 4L19 6" />
+                          </svg>
+                        ) : null}
+                      </span>
 
-                  <StarRating
-                    value={
-                      rating
-                    }
-                    onChange={
-                      setRating
-                    }
-                    size={34}
-                    showLabel={
-                      false
-                    }
-                  />
+                      <span>
+                        Vista el
+                      </span>
+                    </button>
+
+                    <input
+                      type="date"
+                      value={
+                        watchedDate
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setWatchedDate(
+                          event.target
+                            .value,
+                        )
+                      }
+                      className="rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-sm text-zinc-200 outline-none focus:border-fuchsia-500"
+                    />
+
+                    <span className="text-xs text-zinc-600">
+                      {formatDate(
+                        watchedDate,
+                      )}
+                    </span>
+                  </div>
                 </div>
 
                 <textarea
@@ -1170,26 +1224,29 @@ export default function SeriesActions({
                     review
                   }
                   onChange={(
-                    event
+                    event,
                   ) =>
                     setReview(
-                      event.target.value
+                      event.target
+                        .value,
                     )
                   }
                   placeholder="Escribe tu review..."
-                  rows={6}
+                  rows={
+                    7
+                  }
                   className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 outline-none transition focus:border-fuchsia-500"
                 />
 
-                <div className="mt-8 grid grid-cols-3 gap-4 sm:gap-6">
+                <div className="mt-8 grid grid-cols-3 gap-6">
                   <button
                     type="button"
                     onClick={() =>
                       setIsRewatch(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -1216,9 +1273,9 @@ export default function SeriesActions({
                     onClick={() =>
                       setContainsSpoilers(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -1245,9 +1302,9 @@ export default function SeriesActions({
                     onClick={() =>
                       setLiked(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 transition ${
@@ -1270,13 +1327,13 @@ export default function SeriesActions({
                   </button>
                 </div>
 
-                {message && (
+                {message ? (
                   <p className="mt-5 text-sm text-zinc-400">
                     {
                       message
                     }
                   </p>
-                )}
+                ) : null}
 
                 <div className="mt-8 flex justify-end">
                   <button
@@ -1293,14 +1350,14 @@ export default function SeriesActions({
                       ? "Guardando..."
                       : isRewatch
                         ? "Guardar rewatch"
-                        : "Guardar"}
+                        : "Guardar review"}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

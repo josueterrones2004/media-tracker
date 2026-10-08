@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
@@ -84,7 +85,8 @@ type ProfileSection = {
 };
 
 type Favorite = {
-  id: string;
+  id:
+    string;
 
   media_type:
     MediaType;
@@ -674,6 +676,25 @@ export default function ProfileCustomizeEditor({
       ""
     );
 
+  const [
+    pendingNavigation,
+    setPendingNavigation,
+  ] =
+    useState<
+      string |
+      null
+    >(
+      null
+    );
+
+  const [
+    showLeaveConfirm,
+    setShowLeaveConfirm,
+  ] =
+    useState(
+      false
+    );
+
   const activeSearchType =
     searchSection
       ? SECTION_DATA[
@@ -684,6 +705,12 @@ export default function ProfileCustomizeEditor({
 
   /*
    * WARN ABOUT UNSAVED CHANGES
+   *
+   * - Navegación interna:
+   *   modal personalizado.
+   *
+   * - Recargar/cerrar pestaña:
+   *   diálogo nativo del navegador.
    */
 
   useEffect(() => {
@@ -708,7 +735,19 @@ export default function ProfileCustomizeEditor({
         MouseEvent
     ) {
       if (
-        !dirty
+        !dirty ||
+        event.defaultPrevented
+      ) {
+        return;
+      }
+
+      if (
+        event.button !==
+          0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
       ) {
         return;
       }
@@ -751,18 +790,33 @@ export default function ProfileCustomizeEditor({
         return;
       }
 
-      const leave =
-        window.confirm(
-          "Tienes cambios sin guardar. ¿Quieres salir sin guardarlos?"
+      const current =
+        new URL(
+          window.location.href
         );
 
       if (
-        !leave
+        destination.pathname ===
+          current.pathname &&
+        destination.search ===
+          current.search &&
+        destination.hash ===
+          current.hash
       ) {
-        event.preventDefault();
-
-        event.stopPropagation();
+        return;
       }
+
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      setPendingNavigation(
+        `${destination.pathname}${destination.search}${destination.hash}`
+      );
+
+      setShowLeaveConfirm(
+        true
+      );
     }
 
     window.addEventListener(
@@ -791,6 +845,41 @@ export default function ProfileCustomizeEditor({
   }, [
     dirty,
   ]);
+
+  function cancelLeave() {
+    setShowLeaveConfirm(
+      false
+    );
+
+    setPendingNavigation(
+      null
+    );
+  }
+
+  function confirmLeave() {
+    const destination =
+      pendingNavigation;
+
+    setShowLeaveConfirm(
+      false
+    );
+
+    setPendingNavigation(
+      null
+    );
+
+    setDirty(
+      false
+    );
+
+    if (
+      destination
+    ) {
+      router.push(
+        destination
+      );
+    }
+  }
 
   /*
    * FAVORITE SEARCH
@@ -1895,14 +1984,6 @@ export default function ProfileCustomizeEditor({
                   title:
                     favorite.title,
 
-                  /*
-                   * Guardamos la URL histórica,
-                   * igual que antes.
-                   *
-                   * El artwork global solo es una
-                   * capa visual y no debe alterar
-                   * profile_favorites.
-                   */
                   cover_url:
                     favorite.cover_url,
 
@@ -2458,6 +2539,78 @@ export default function ProfileCustomizeEditor({
 
       <div className="h-16" />
 
+      {/* CUSTOM UNSAVED CHANGES MODAL */}
+
+      {showLeaveConfirm && (
+        <div
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="leave-profile-title"
+        >
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/60">
+            <button
+              type="button"
+              onClick={
+                cancelLeave
+              }
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-900 hover:text-zinc-200"
+              aria-label="Cerrar"
+            >
+              <X
+                size={
+                  19
+                }
+              />
+            </button>
+
+            <div className="p-6 sm:p-7">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+                <AlertTriangle
+                  size={
+                    22
+                  }
+                />
+              </div>
+
+              <h2
+                id="leave-profile-title"
+                className="mt-5 pr-10 text-xl font-semibold text-zinc-100"
+              >
+                ¿Salir sin guardar?
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                Tienes cambios en tu perfil que todavía no se han guardado.
+                Si sales ahora, esos cambios se perderán.
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-zinc-800 bg-zinc-950/80 p-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={
+                  cancelLeave
+                }
+                className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+              >
+                Seguir editando
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  confirmLeave
+                }
+                className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-400"
+              >
+                Salir sin guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {cropTarget &&
         cropImage && (
           <ImageCropModal
@@ -2638,8 +2791,6 @@ function ProfileSectionEditor({
           : "opacity-50"
       }`}
     >
-      {/* HEADER */}
-
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-semibold text-zinc-100">
@@ -2726,8 +2877,6 @@ function ProfileSectionEditor({
         </div>
       </div>
 
-      {/* REAL PREVIEW */}
-
       <div className="mt-5">
         {section.section_key ===
         "ACTIVITY" ? (
@@ -2747,8 +2896,6 @@ function ProfileSectionEditor({
           />
         )}
       </div>
-
-      {/* ADD FAVORITE */}
 
       {mediaType && (
         <div className="mt-5">

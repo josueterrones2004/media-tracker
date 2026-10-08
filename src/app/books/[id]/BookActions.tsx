@@ -1,33 +1,22 @@
 "use client";
 
-import Image from "next/image";
-
 import {
   BookOpen,
   Heart,
   Repeat2,
   ShieldAlert,
 } from "lucide-react";
-
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useState,
 } from "react";
 
-import {
-  useRouter,
-} from "next/navigation";
-
 import MediaActionBar from "@/components/media/MediaActionBar";
 import StarRating from "@/components/media/StarRating";
-
-import {
-  shouldUseOriginalImage,
-} from "@/lib/image-optimization";
-
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import { createClient } from "@/lib/supabase/client";
 
 interface BookActionsProps {
   book: {
@@ -38,8 +27,7 @@ interface BookActionsProps {
       | string
       | null;
 
-    authors:
-      string[];
+    authors: string[];
   };
 }
 
@@ -49,16 +37,12 @@ type BookStatus =
   | "DROPPED";
 
 function isBookStatus(
-  value:
-    string
+  value: string,
 ): value is BookStatus {
   return (
-    value ===
-      "PENDING" ||
-    value ===
-      "IN_PROGRESS" ||
-    value ===
-      "DROPPED"
+    value === "PENDING" ||
+    value === "IN_PROGRESS" ||
+    value === "DROPPED"
   );
 }
 
@@ -70,20 +54,16 @@ function getToday() {
     new Date(
       now.getTime() -
         now.getTimezoneOffset() *
-          60_000
+          60_000,
     );
 
   return local
     .toISOString()
-    .slice(
-      0,
-      10
-    );
+    .slice(0, 10);
 }
 
 function formatDate(
-  date:
-    string
+  date: string,
 ) {
   return new Intl.DateTimeFormat(
     "es-MX",
@@ -96,11 +76,11 @@ function formatDate(
 
       year:
         "numeric",
-    }
+    },
   ).format(
     new Date(
-      `${date}T12:00:00`
-    )
+      `${date}T12:00:00`,
+    ),
   );
 }
 
@@ -115,7 +95,7 @@ export default function BookActions({
   ] =
     useState(
       () =>
-        createClient()
+        createClient(),
     );
 
   const [
@@ -183,7 +163,7 @@ export default function BookActions({
     setReadDate,
   ] =
     useState(
-      getToday()
+      getToday(),
     );
 
   const [
@@ -191,6 +171,10 @@ export default function BookActions({
     setMessage,
   ] =
     useState("");
+
+  /* =========================================================
+     LOAD CURRENT STATE
+  ========================================================= */
 
   useEffect(() => {
     let cancelled =
@@ -221,43 +205,43 @@ export default function BookActions({
               await Promise.all([
                 supabase
                   .from(
-                    "library_items"
+                    "library_items",
                   )
                   .select(
-                    "status"
+                    "status",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "BOOK"
+                    "BOOK",
                   )
                   .eq(
                     "external_id",
-                    book.id
+                    book.id,
                   )
                   .maybeSingle(),
 
                 supabase
                   .from(
-                    "reviews"
+                    "reviews",
                   )
                   .select(
-                    "id"
+                    "id",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "BOOK"
+                    "BOOK",
                   )
                   .eq(
                     "external_id",
-                    book.id
+                    book.id,
                   )
                   .limit(1),
               ]);
@@ -267,7 +251,7 @@ export default function BookActions({
             ) {
               console.error(
                 "Error loading book state:",
-                libraryResult.error
+                libraryResult.error,
               );
             }
 
@@ -276,7 +260,7 @@ export default function BookActions({
             ) {
               console.error(
                 "Error loading book reviews:",
-                reviewResult.error
+                reviewResult.error,
               );
             }
 
@@ -299,19 +283,19 @@ export default function BookActions({
                 loadedStatus ===
                   "DROPPED"
                 ? loadedStatus
-                : null
+                : null,
             );
 
             setHasReadBefore(
               Boolean(
                 reviewResult
                   .data
-                  ?.length
-              )
+                  ?.length,
+              ),
             );
           })();
         },
-        0
+        0,
       );
 
     return () => {
@@ -319,7 +303,7 @@ export default function BookActions({
         true;
 
       window.clearTimeout(
-        timeout
+        timeout,
       );
     };
   }, [
@@ -327,9 +311,12 @@ export default function BookActions({
     supabase,
   ]);
 
+  /* =========================================================
+     BOOK DATA
+  ========================================================= */
+
   function getBookData(
-    userId:
-      string
+    userId: string,
   ) {
     return {
       user_id:
@@ -358,20 +345,66 @@ export default function BookActions({
     };
   }
 
-  async function createLibraryActivity(
-    userId:
-      string,
+  /* =========================================================
+     CLEAR TEMPORARY ACTIVITY
+  ========================================================= */
 
-    activityType:
-      | "STARTED"
-      | "ADDED_PENDING"
+  async function clearLibraryActivity(
+    userId: string,
   ) {
     const {
       error,
     } =
       await supabase
         .from(
-          "activity_events"
+          "activity_events",
+        )
+        .delete()
+        .eq(
+          "user_id",
+          userId,
+        )
+        .eq(
+          "media_type",
+          "BOOK",
+        )
+        .eq(
+          "external_id",
+          book.id,
+        )
+        .in(
+          "activity_type",
+          [
+            "ADDED_PENDING",
+            "STARTED",
+          ],
+        );
+
+    if (error) {
+      console.error(
+        "Error clearing book library activity:",
+        error,
+      );
+    }
+  }
+
+  /* =========================================================
+     ACTIVITY
+  ========================================================= */
+
+  async function createLibraryActivity(
+    userId: string,
+
+    activityType:
+      | "STARTED"
+      | "ADDED_PENDING",
+  ) {
+    const {
+      error,
+    } =
+      await supabase
+        .from(
+          "activity_events",
         )
         .insert({
           user_id:
@@ -396,22 +429,31 @@ export default function BookActions({
     if (error) {
       console.error(
         "Error creating book activity:",
-        error
+        error,
       );
     }
   }
 
+  /* =========================================================
+     LIBRARY STATUS
+  ========================================================= */
+
   async function setLibraryStatus(
     newStatus:
       | BookStatus
-      | null
+      | null,
   ) {
     if (loading) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true,
+    );
+
+    setMessage(
+      "",
+    );
 
     const {
       data: {
@@ -422,10 +464,12 @@ export default function BookActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
@@ -439,39 +483,49 @@ export default function BookActions({
       } =
         await supabase
           .from(
-            "library_items"
+            "library_items",
           )
           .delete()
           .eq(
             "user_id",
-            user.id
+            user.id,
           )
           .eq(
             "media_type",
-            "BOOK"
+            "BOOK",
           )
           .eq(
             "external_id",
-            book.id
+            book.id,
           );
 
       if (error) {
         setMessage(
-          error.message
+          error.message,
         );
 
-        setLoading(false);
+        setLoading(
+          false,
+        );
 
         return;
       }
 
-      setStatus(null);
-
-      setMessage(
-        "Libro quitado de tu biblioteca."
+      await clearLibraryActivity(
+        user.id,
       );
 
-      setLoading(false);
+      setStatus(
+        null,
+      );
+
+      setMessage(
+        "Libro quitado de tu biblioteca.",
+      );
+
+      setLoading(
+        false,
+      );
 
       router.refresh();
 
@@ -483,12 +537,12 @@ export default function BookActions({
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .upsert(
           {
             ...getBookData(
-              user.id
+              user.id,
             ),
 
             status:
@@ -497,18 +551,24 @@ export default function BookActions({
           {
             onConflict:
               "user_id,media_type,external_id",
-          }
+          },
         );
 
     if (error) {
       setMessage(
-        error.message
+        error.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
+
+    await clearLibraryActivity(
+      user.id,
+    );
 
     if (
       newStatus ===
@@ -516,7 +576,7 @@ export default function BookActions({
     ) {
       await createLibraryActivity(
         user.id,
-        "STARTED"
+        "STARTED",
       );
     }
 
@@ -526,12 +586,12 @@ export default function BookActions({
     ) {
       await createLibraryActivity(
         user.id,
-        "ADDED_PENDING"
+        "ADDED_PENDING",
       );
     }
 
     setStatus(
-      newStatus
+      newStatus,
     );
 
     if (
@@ -539,7 +599,7 @@ export default function BookActions({
       "IN_PROGRESS"
     ) {
       setMessage(
-        "Libro marcado como leyendo."
+        "Libro marcado como leyendo.",
       );
     }
 
@@ -548,26 +608,42 @@ export default function BookActions({
       "PENDING"
     ) {
       setMessage(
-        "Libro añadido a pendientes."
+        "Libro añadido a pendientes.",
       );
     }
+
+    /*
+     * Se conserva para compatibilidad
+     * con registros antiguos.
+     *
+     * Ya no existe botón "Abandonado"
+     * en la interfaz.
+     */
 
     if (
       newStatus ===
       "DROPPED"
     ) {
       setMessage(
-        "Libro marcado como abandonado."
+        "Libro marcado como abandonado.",
       );
     }
 
-    setLoading(false);
+    setLoading(
+      false,
+    );
 
     router.refresh();
   }
 
+  /* =========================================================
+     OPEN READ MODAL
+  ========================================================= */
+
   async function openReadModal() {
-    setMessage("");
+    setMessage(
+      "",
+    );
 
     const {
       data: {
@@ -578,7 +654,7 @@ export default function BookActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
       return;
@@ -592,65 +668,80 @@ export default function BookActions({
     } =
       await supabase
         .from(
-          "reviews"
+          "reviews",
         )
         .select(
-          "id"
+          "id",
         )
         .eq(
           "user_id",
-          user.id
+          user.id,
         )
         .eq(
           "media_type",
-          "BOOK"
+          "BOOK",
         )
         .eq(
           "external_id",
-          book.id
+          book.id,
         )
         .limit(1);
 
     if (error) {
       console.error(
         "Error checking previous book reviews:",
-        error
+        error,
       );
     }
 
     setIsReread(
       Boolean(
         previousReviews
-          ?.length
-      )
+          ?.length,
+      ),
     );
 
     setReadDate(
-      getToday()
+      getToday(),
     );
 
-    setRating(null);
+    setRating(
+      null,
+    );
 
-    setLiked(true);
+    setLiked(
+      true,
+    );
 
     setContainsSpoilers(
-      false
+      false,
     );
 
-    setReview("");
+    setReview(
+      "",
+    );
 
     setShowReview(
-      true
+      true,
     );
   }
+
+  /* =========================================================
+     SAVE REVIEW
+  ========================================================= */
 
   async function saveReview() {
     if (loading) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setLoading(
+      true,
+    );
+
+    setMessage(
+      "",
+    );
 
     const cleanReview =
       review.trim();
@@ -664,10 +755,12 @@ export default function BookActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
@@ -681,7 +774,7 @@ export default function BookActions({
     } =
       await supabase
         .from(
-          "reviews"
+          "reviews",
         )
         .insert({
           user_id:
@@ -731,7 +824,7 @@ export default function BookActions({
             null,
         })
         .select(
-          "id"
+          "id",
         )
         .single();
 
@@ -739,10 +832,12 @@ export default function BookActions({
       reviewError
     ) {
       setMessage(
-        reviewError.message
+        reviewError.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
@@ -756,7 +851,7 @@ export default function BookActions({
       } =
         await supabase
           .from(
-            "activity_events"
+            "activity_events",
           )
           .insert({
             user_id:
@@ -786,7 +881,7 @@ export default function BookActions({
       ) {
         console.error(
           "Error creating book review activity:",
-          activityError
+          activityError,
         );
       }
     }
@@ -797,138 +892,155 @@ export default function BookActions({
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .delete()
         .eq(
           "user_id",
-          user.id
+          user.id,
         )
         .eq(
           "media_type",
-          "BOOK"
+          "BOOK",
         )
         .eq(
           "external_id",
-          book.id
+          book.id,
         );
 
     if (
       deleteError
     ) {
       setMessage(
-        deleteError.message
+        deleteError.message,
       );
 
-      setLoading(false);
+      setLoading(
+        false,
+      );
 
       return;
     }
 
-    setStatus(null);
+    await clearLibraryActivity(
+      user.id,
+    );
+
+    setStatus(
+      null,
+    );
 
     setHasReadBefore(
-      true
+      true,
     );
 
     setShowReview(
-      false
+      false,
     );
 
     setMessage(
       isReread
         ? "Relectura guardada."
-        : "Libro marcado como leído."
+        : "Libro marcado como leído.",
     );
 
-    setLoading(false);
+    setLoading(
+      false,
+    );
 
     router.refresh();
   }
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
     <>
-      <MediaActionBar
-        primaryLabel={
-          hasReadBefore
-            ? "Registrar relectura"
-            : "Marcar como leído"
-        }
-        onPrimaryAction={
-          openReadModal
-        }
-        primaryDisabled={
-          loading
-        }
-        activeStatus={
-          status
-        }
-        statusDisabled={
-          loading
-        }
-        statusOptions={[
-          {
-            value:
-              "IN_PROGRESS",
+      {/* ==================================================
+          ACTIONS
 
-            label:
-              "Leyendo",
-          },
-          {
-            value:
-              "PENDING",
+          mt-6 iguala la separación de
+          Películas, Juegos y Series.
+      ================================================== */}
 
-            label:
-              "Pendiente",
-          },
-          {
-            value:
-              "DROPPED",
+      <div className="mt-6">
+        <MediaActionBar
+          primaryLabel={
+            hasReadBefore
+              ? "Registrar relectura"
+              : "Marcar como leído"
+          }
+          onPrimaryAction={
+            openReadModal
+          }
+          primaryDisabled={
+            loading
+          }
+          activeStatus={
+            status
+          }
+          statusDisabled={
+            loading
+          }
+          statusOptions={[
+            {
+              value:
+                "IN_PROGRESS",
 
-            label:
-              "Abandonado",
+              label:
+                "Leyendo",
+            },
+            {
+              value:
+                "PENDING",
 
-            destructive:
-              true,
-          },
-        ]}
-        onStatusChange={(
-          newStatus
-        ) => {
-          if (
-            newStatus ===
-            null
-          ) {
-            return setLibraryStatus(
+              label:
+                "Pendiente",
+            },
+          ]}
+          onStatusChange={(
+            newStatus,
+          ) => {
+            if (
+              newStatus ===
               null
+            ) {
+              return setLibraryStatus(
+                null,
+              );
+            }
+
+            if (
+              !isBookStatus(
+                newStatus,
+              )
+            ) {
+              return;
+            }
+
+            return setLibraryStatus(
+              newStatus,
             );
+          }}
+          message={
+            message
           }
+        />
+      </div>
 
-          if (
-            !isBookStatus(
-              newStatus
-            )
-          ) {
-            return;
-          }
+      {/* ==================================================
+          READ / REVIEW MODAL
+      ================================================== */}
 
-          return setLibraryStatus(
-            newStatus
-          );
-        }}
-        message={
-          message
-        }
-      />
-
-      {showReview && (
+      {showReview ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7">
             <button
               type="button"
               onClick={() =>
                 setShowReview(
-                  false
+                  false,
                 )
               }
               disabled={
@@ -941,6 +1053,8 @@ export default function BookActions({
             </button>
 
             <div className="grid gap-8 md:grid-cols-[180px_1fr] md:items-start">
+              {/* POSTER */}
+
               <div className="flex justify-center md:justify-start md:pt-12">
                 <div className="w-full max-w-[180px]">
                   {book.coverUrl ? (
@@ -959,7 +1073,7 @@ export default function BookActions({
                       }
                       unoptimized={
                         shouldUseOriginalImage(
-                          book.coverUrl
+                          book.coverUrl,
                         )
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
@@ -971,6 +1085,8 @@ export default function BookActions({
                   )}
                 </div>
               </div>
+
+              {/* CONTENT */}
 
               <div className="min-w-0 pt-2 md:pt-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
@@ -986,22 +1102,25 @@ export default function BookActions({
                 </h2>
 
                 {book.authors.length >
-                  0 && (
+                0 ? (
                   <p className="mt-1 text-sm text-zinc-500">
                     {book.authors.join(
-                      ", "
+                      ", ",
                     )}
                   </p>
-                )}
+                ) : null}
 
                 <p className="mt-5 text-sm text-zinc-500">
                   Leído el{" "}
+
                   <span className="text-zinc-300">
                     {formatDate(
-                      readDate
+                      readDate,
                     )}
                   </span>
                 </p>
+
+                {/* RATING */}
 
                 <div className="mt-6">
                   <p className="mb-2 text-sm font-medium text-zinc-300">
@@ -1015,28 +1134,37 @@ export default function BookActions({
                     onChange={
                       setRating
                     }
-                    size={34}
+                    size={
+                      34
+                    }
                     showLabel={
                       false
                     }
                   />
                 </div>
 
+                {/* REVIEW */}
+
                 <textarea
                   value={
                     review
                   }
                   onChange={(
-                    event
+                    event,
                   ) =>
                     setReview(
-                      event.target.value
+                      event.target
+                        .value,
                     )
                   }
                   placeholder="Escribe tu review (opcional)..."
-                  rows={6}
+                  rows={
+                    6
+                  }
                   className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm leading-6 text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-fuchsia-500"
                 />
+
+                {/* OPTIONS */}
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <button
@@ -1044,9 +1172,9 @@ export default function BookActions({
                     onClick={() =>
                       setIsReread(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1057,11 +1185,15 @@ export default function BookActions({
                   >
                     {isReread ? (
                       <Repeat2
-                        size={25}
+                        size={
+                          25
+                        }
                       />
                     ) : (
                       <BookOpen
-                        size={25}
+                        size={
+                          25
+                        }
                       />
                     )}
 
@@ -1077,9 +1209,9 @@ export default function BookActions({
                     onClick={() =>
                       setContainsSpoilers(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1089,7 +1221,9 @@ export default function BookActions({
                     }`}
                   >
                     <ShieldAlert
-                      size={25}
+                      size={
+                        25
+                      }
                     />
 
                     <span className="text-sm">
@@ -1104,9 +1238,9 @@ export default function BookActions({
                     onClick={() =>
                       setLiked(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1116,7 +1250,9 @@ export default function BookActions({
                     }`}
                   >
                     <Heart
-                      size={25}
+                      size={
+                        25
+                      }
                       fill={
                         liked
                           ? "currentColor"
@@ -1132,13 +1268,15 @@ export default function BookActions({
                   </button>
                 </div>
 
-                {message && (
+                {message ? (
                   <p className="mt-5 text-sm text-zinc-500">
                     {
                       message
                     }
                   </p>
-                )}
+                ) : null}
+
+                {/* SAVE */}
 
                 <div className="mt-7 flex justify-end">
                   <button
@@ -1162,7 +1300,7 @@ export default function BookActions({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

@@ -1,33 +1,22 @@
 "use client";
 
 import Image from "next/image";
-
 import {
+  Clock3,
   Gamepad2,
   Heart,
+  Play,
   Repeat2,
   ShieldAlert,
 } from "lucide-react";
-
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  useRouter,
-} from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import MediaActionBar from "@/components/media/MediaActionBar";
 import StarRating from "@/components/media/StarRating";
 
-import {
-  shouldUseOriginalImage,
-} from "@/lib/image-optimization";
-
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { shouldUseOriginalImage } from "@/lib/image-optimization";
+import { createClient } from "@/lib/supabase/client";
 
 interface GameActionsProps {
   game: {
@@ -54,16 +43,12 @@ type GameStatus =
   | "DROPPED";
 
 function isGameStatus(
-  value:
-    string
+  value: string,
 ): value is GameStatus {
   return (
-    value ===
-      "PENDING" ||
-    value ===
-      "IN_PROGRESS" ||
-    value ===
-      "DROPPED"
+    value === "PENDING" ||
+    value === "IN_PROGRESS" ||
+    value === "DROPPED"
   );
 }
 
@@ -75,37 +60,28 @@ function getToday() {
     new Date(
       now.getTime() -
         now.getTimezoneOffset() *
-          60_000
+          60_000,
     );
 
   return local
     .toISOString()
-    .slice(
-      0,
-      10
-    );
+    .slice(0, 10);
 }
 
 function formatDate(
-  date:
-    string
+  date: string,
 ) {
   return new Intl.DateTimeFormat(
     "es-MX",
     {
-      day:
-        "numeric",
-
-      month:
-        "short",
-
-      year:
-        "numeric",
-    }
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    },
   ).format(
     new Date(
-      `${date}T12:00:00`
-    )
+      `${date}T12:00:00`,
+    ),
   );
 }
 
@@ -115,12 +91,10 @@ export default function GameActions({
   const router =
     useRouter();
 
-  const [
-    supabase,
-  ] =
+  const [supabase] =
     useState(
       () =>
-        createClient()
+        createClient(),
     );
 
   const [
@@ -188,7 +162,7 @@ export default function GameActions({
     setCompletedDate,
   ] =
     useState(
-      getToday()
+      getToday(),
     );
 
   const [
@@ -196,6 +170,10 @@ export default function GameActions({
     setMessage,
   ] =
     useState("");
+
+  /*
+   * CARGAR ESTADO REAL DEL JUEGO
+   */
 
   useEffect(() => {
     let cancelled =
@@ -226,43 +204,43 @@ export default function GameActions({
               await Promise.all([
                 supabase
                   .from(
-                    "library_items"
+                    "library_items",
                   )
                   .select(
-                    "status"
+                    "status",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "GAME"
+                    "GAME",
                   )
                   .eq(
                     "external_id",
-                    game.id
+                    game.id,
                   )
                   .maybeSingle(),
 
                 supabase
                   .from(
-                    "reviews"
+                    "reviews",
                   )
                   .select(
-                    "id"
+                    "id",
                   )
                   .eq(
                     "user_id",
-                    user.id
+                    user.id,
                   )
                   .eq(
                     "media_type",
-                    "GAME"
+                    "GAME",
                   )
                   .eq(
                     "external_id",
-                    game.id
+                    game.id,
                   )
                   .limit(1),
               ]);
@@ -272,7 +250,7 @@ export default function GameActions({
             ) {
               console.error(
                 "Error loading game state:",
-                libraryResult.error
+                libraryResult.error,
               );
             }
 
@@ -281,7 +259,7 @@ export default function GameActions({
             ) {
               console.error(
                 "Error loading game reviews:",
-                reviewResult.error
+                reviewResult.error,
               );
             }
 
@@ -296,27 +274,33 @@ export default function GameActions({
                 .data
                 ?.status;
 
-            setStatus(
+            if (
               loadedStatus ===
-                  "PENDING" ||
-                loadedStatus ===
-                  "IN_PROGRESS" ||
-                loadedStatus ===
-                  "DROPPED"
-                ? loadedStatus
-                : null
-            );
+                "PENDING" ||
+              loadedStatus ===
+                "IN_PROGRESS" ||
+              loadedStatus ===
+                "DROPPED"
+            ) {
+              setStatus(
+                loadedStatus,
+              );
+            } else {
+              setStatus(
+                null,
+              );
+            }
 
             setHasCompletedBefore(
               Boolean(
                 reviewResult
                   .data
-                  ?.length
-              )
+                  ?.length,
+              ),
             );
           })();
         },
-        0
+        0,
       );
 
     return () => {
@@ -324,7 +308,7 @@ export default function GameActions({
         true;
 
       window.clearTimeout(
-        timeout
+        timeout,
       );
     };
   }, [
@@ -333,8 +317,7 @@ export default function GameActions({
   ]);
 
   function getGameData(
-    userId:
-      string
+    userId: string,
   ) {
     return {
       user_id:
@@ -363,20 +346,58 @@ export default function GameActions({
     };
   }
 
-  async function createActivity(
-    userId:
-      string,
-
-    activityType:
-      | "STARTED"
-      | "ADDED_PENDING"
+  async function clearTemporaryActivity(
+    userId: string,
   ) {
     const {
       error,
     } =
       await supabase
         .from(
-          "activity_events"
+          "activity_events",
+        )
+        .delete()
+        .eq(
+          "user_id",
+          userId,
+        )
+        .eq(
+          "media_type",
+          "GAME",
+        )
+        .eq(
+          "external_id",
+          game.id,
+        )
+        .in(
+          "activity_type",
+          [
+            "ADDED_PENDING",
+            "STARTED",
+          ],
+        );
+
+    if (error) {
+      console.error(
+        "Error clearing temporary game activity:",
+        error,
+      );
+    }
+  }
+
+  async function createActivity(
+    userId: string,
+
+    activityType:
+      | "STARTED"
+      | "ADDED_PENDING",
+  ) {
+    const {
+      error,
+    } =
+      await supabase
+        .from(
+          "activity_events",
         )
         .insert({
           user_id:
@@ -401,7 +422,7 @@ export default function GameActions({
     if (error) {
       console.error(
         "Error creating game activity:",
-        error
+        error,
       );
     }
   }
@@ -409,7 +430,7 @@ export default function GameActions({
   async function setLibraryStatus(
     newStatus:
       | GameStatus
-      | null
+      | null,
   ) {
     if (loading) {
       return;
@@ -427,7 +448,7 @@ export default function GameActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
       setLoading(false);
@@ -444,25 +465,25 @@ export default function GameActions({
       } =
         await supabase
           .from(
-            "library_items"
+            "library_items",
           )
           .delete()
           .eq(
             "user_id",
-            user.id
+            user.id,
           )
           .eq(
             "media_type",
-            "GAME"
+            "GAME",
           )
           .eq(
             "external_id",
-            game.id
+            game.id,
           );
 
       if (error) {
         setMessage(
-          error.message
+          error.message,
         );
 
         setLoading(false);
@@ -470,10 +491,16 @@ export default function GameActions({
         return;
       }
 
-      setStatus(null);
+      await clearTemporaryActivity(
+        user.id,
+      );
+
+      setStatus(
+        null,
+      );
 
       setMessage(
-        "Juego quitado de tu biblioteca."
+        "Juego quitado de tu biblioteca.",
       );
 
       setLoading(false);
@@ -483,17 +510,21 @@ export default function GameActions({
       return;
     }
 
+    await clearTemporaryActivity(
+      user.id,
+    );
+
     const {
       error,
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .upsert(
           {
             ...getGameData(
-              user.id
+              user.id,
             ),
 
             status:
@@ -502,12 +533,12 @@ export default function GameActions({
           {
             onConflict:
               "user_id,media_type,external_id",
-          }
+          },
         );
 
     if (error) {
       setMessage(
-        error.message
+        error.message,
       );
 
       setLoading(false);
@@ -521,7 +552,7 @@ export default function GameActions({
     ) {
       await createActivity(
         user.id,
-        "STARTED"
+        "STARTED",
       );
     }
 
@@ -531,12 +562,12 @@ export default function GameActions({
     ) {
       await createActivity(
         user.id,
-        "ADDED_PENDING"
+        "ADDED_PENDING",
       );
     }
 
     setStatus(
-      newStatus
+      newStatus,
     );
 
     if (
@@ -544,7 +575,7 @@ export default function GameActions({
       "IN_PROGRESS"
     ) {
       setMessage(
-        "Juego marcado como jugando."
+        "Juego marcado como jugando.",
       );
     }
 
@@ -553,7 +584,7 @@ export default function GameActions({
       "PENDING"
     ) {
       setMessage(
-        "Juego añadido a pendientes."
+        "Juego añadido a pendientes.",
       );
     }
 
@@ -562,7 +593,7 @@ export default function GameActions({
       "DROPPED"
     ) {
       setMessage(
-        "Juego marcado como abandonado."
+        "Juego marcado como abandonado.",
       );
     }
 
@@ -583,7 +614,7 @@ export default function GameActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
       return;
@@ -597,37 +628,40 @@ export default function GameActions({
     } =
       await supabase
         .from(
-          "reviews"
+          "reviews",
         )
         .select(
-          "id"
+          "id",
         )
         .eq(
           "user_id",
-          user.id
+          user.id,
         )
         .eq(
           "media_type",
-          "GAME"
+          "GAME",
         )
         .eq(
           "external_id",
-          game.id
+          game.id,
         )
         .limit(1);
 
     if (error) {
       console.error(
         "Error checking previous game reviews:",
-        error
+        error,
       );
     }
 
-    setIsReplay(
+    const completedBefore =
       Boolean(
         previousReviews
-          ?.length
-      )
+          ?.length,
+      );
+
+    setIsReplay(
+      completedBefore,
     );
 
     setReview("");
@@ -635,15 +669,15 @@ export default function GameActions({
     setLiked(true);
 
     setContainsSpoilers(
-      false
+      false,
     );
 
     setCompletedDate(
-      getToday()
+      getToday(),
     );
 
     setShowReview(
-      true
+      true,
     );
   }
 
@@ -667,7 +701,7 @@ export default function GameActions({
 
     if (!user) {
       setMessage(
-        "Debes iniciar sesión."
+        "Debes iniciar sesión.",
       );
 
       setLoading(false);
@@ -684,7 +718,7 @@ export default function GameActions({
     } =
       await supabase
         .from(
-          "reviews"
+          "reviews",
         )
         .insert({
           user_id:
@@ -734,7 +768,7 @@ export default function GameActions({
             game.releaseYear,
         })
         .select(
-          "id"
+          "id",
         )
         .single();
 
@@ -742,7 +776,7 @@ export default function GameActions({
       reviewError
     ) {
       setMessage(
-        reviewError.message
+        reviewError.message,
       );
 
       setLoading(false);
@@ -759,7 +793,7 @@ export default function GameActions({
       } =
         await supabase
           .from(
-            "activity_events"
+            "activity_events",
           )
           .insert({
             user_id:
@@ -789,7 +823,7 @@ export default function GameActions({
       ) {
         console.error(
           "Error creating game review activity:",
-          activityError
+          activityError,
         );
       }
     }
@@ -800,27 +834,27 @@ export default function GameActions({
     } =
       await supabase
         .from(
-          "library_items"
+          "library_items",
         )
         .delete()
         .eq(
           "user_id",
-          user.id
+          user.id,
         )
         .eq(
           "media_type",
-          "GAME"
+          "GAME",
         )
         .eq(
           "external_id",
-          game.id
+          game.id,
         );
 
     if (
       deleteError
     ) {
       setMessage(
-        deleteError.message
+        deleteError.message,
       );
 
       setLoading(false);
@@ -828,20 +862,26 @@ export default function GameActions({
       return;
     }
 
-    setStatus(null);
+    await clearTemporaryActivity(
+      user.id,
+    );
+
+    setStatus(
+      null,
+    );
 
     setHasCompletedBefore(
-      true
+      true,
     );
 
     setShowReview(
-      false
+      false,
     );
 
     setMessage(
       isReplay
         ? "Replay guardado."
-        : "Juego marcado como completado."
+        : "Juego marcado como completado.",
     );
 
     setLoading(false);
@@ -851,89 +891,102 @@ export default function GameActions({
 
   return (
     <>
-      <MediaActionBar
-        primaryLabel={
-          hasCompletedBefore
-            ? "Registrar replay"
-            : "Marcar como completado"
-        }
-        onPrimaryAction={
-          openCompletedModal
-        }
-        primaryDisabled={
-          loading
-        }
-        activeStatus={
-          status
-        }
-        statusDisabled={
-          loading
-        }
-        statusOptions={[
-          {
-            value:
-              "IN_PROGRESS",
+      <div className="mt-6">
+        <MediaActionBar
+          primaryLabel={
+            hasCompletedBefore
+              ? "✓ Completado"
+              : "Marcar como completado"
+          }
+          primaryActive={
+            hasCompletedBefore
+          }
+          onPrimaryAction={
+            openCompletedModal
+          }
+          primaryDisabled={
+            loading
+          }
+          activeStatus={
+            status
+          }
+          statusDisabled={
+            loading
+          }
+          statusOptions={[
+            {
+              value:
+                "IN_PROGRESS",
 
-            label:
-              "Jugando",
-          },
-          {
-            value:
-              "PENDING",
+              label:
+                "Jugando",
 
-            label:
-              "Pendiente",
-          },
-          {
-            value:
-              "DROPPED",
+              icon: (
+                <Play
+                  size={
+                    13
+                  }
+                />
+              ),
+            },
+            {
+              value:
+                "PENDING",
 
-            label:
-              "Abandonado",
+              label:
+                "Pendiente",
 
-            destructive:
-              true,
-          },
-        ]}
-        onStatusChange={(
-          newStatus
-        ) => {
-          if (
-            newStatus ===
-            null
-          ) {
-            return setLibraryStatus(
+              icon: (
+                <Clock3
+                  size={
+                    13
+                  }
+                />
+              ),
+            },
+          ]}
+          onStatusChange={(
+            newStatus,
+          ) => {
+            if (
+              newStatus ===
               null
+            ) {
+              return setLibraryStatus(
+                null,
+              );
+            }
+
+            if (
+              !isGameStatus(
+                newStatus,
+              )
+            ) {
+              return;
+            }
+
+            return setLibraryStatus(
+              newStatus,
             );
+          }}
+          message={
+            message
           }
+        />
+      </div>
 
-          if (
-            !isGameStatus(
-              newStatus
-            )
-          ) {
-            return;
-          }
-
-          return setLibraryStatus(
-            newStatus
-          );
-        }}
-        message={
-          message
-        }
-      />
-
-      {showReview && (
+      {showReview ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl sm:p-7">
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
                 setShowReview(
-                  false
-                )
-              }
+                  false,
+                );
+
+                setMessage("");
+              }}
               disabled={
                 loading
               }
@@ -962,7 +1015,7 @@ export default function GameActions({
                       }
                       unoptimized={
                         shouldUseOriginalImage(
-                          game.coverUrl
+                          game.coverUrl,
                         )
                       }
                       className="w-full rounded-xl object-cover shadow-xl"
@@ -989,23 +1042,41 @@ export default function GameActions({
                     }
                   </h2>
 
-                  {game.releaseYear && (
+                  {game.releaseYear ? (
                     <span className="text-lg text-zinc-500">
                       {
                         game.releaseYear
                       }
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <p className="mt-5 text-sm text-zinc-500">
                   Completado el{" "}
                   <span className="text-zinc-300">
                     {formatDate(
-                      completedDate
+                      completedDate,
                     )}
                   </span>
                 </p>
+
+                <input
+                  type="date"
+                  value={
+                    completedDate
+                  }
+                  max={
+                    getToday()
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setCompletedDate(
+                      event.target.value,
+                    )
+                  }
+                  className="mt-3 h-10 rounded-lg border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-300 outline-none transition focus:border-fuchsia-500"
+                />
 
                 <div className="mt-6">
                   <p className="mb-2 text-sm font-medium text-zinc-300">
@@ -1019,7 +1090,9 @@ export default function GameActions({
                     onChange={
                       setRating
                     }
-                    size={34}
+                    size={
+                      34
+                    }
                     showLabel={
                       false
                     }
@@ -1031,14 +1104,16 @@ export default function GameActions({
                     review
                   }
                   onChange={(
-                    event
+                    event,
                   ) =>
                     setReview(
-                      event.target.value
+                      event.target.value,
                     )
                   }
                   placeholder="Escribe tu review (opcional)..."
-                  rows={6}
+                  rows={
+                    6
+                  }
                   className="mt-6 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm leading-6 text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-fuchsia-500"
                 />
 
@@ -1048,9 +1123,9 @@ export default function GameActions({
                     onClick={() =>
                       setIsReplay(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1061,11 +1136,15 @@ export default function GameActions({
                   >
                     {isReplay ? (
                       <Repeat2
-                        size={25}
+                        size={
+                          25
+                        }
                       />
                     ) : (
                       <Gamepad2
-                        size={25}
+                        size={
+                          25
+                        }
                       />
                     )}
 
@@ -1081,9 +1160,9 @@ export default function GameActions({
                     onClick={() =>
                       setContainsSpoilers(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1093,7 +1172,9 @@ export default function GameActions({
                     }`}
                   >
                     <ShieldAlert
-                      size={25}
+                      size={
+                        25
+                      }
                     />
 
                     <span className="text-sm">
@@ -1108,9 +1189,9 @@ export default function GameActions({
                     onClick={() =>
                       setLiked(
                         (
-                          current
+                          current,
                         ) =>
-                          !current
+                          !current,
                       )
                     }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
@@ -1120,7 +1201,9 @@ export default function GameActions({
                     }`}
                   >
                     <Heart
-                      size={25}
+                      size={
+                        25
+                      }
                       fill={
                         liked
                           ? "currentColor"
@@ -1136,20 +1219,20 @@ export default function GameActions({
                   </button>
                 </div>
 
-                {message && (
+                {message ? (
                   <p className="mt-5 text-sm text-zinc-500">
                     {
                       message
                     }
                   </p>
-                )}
+                ) : null}
 
                 <div className="mt-7 flex justify-end">
                   <button
                     type="button"
-                    onClick={
-                      saveReview
-                    }
+                    onClick={() => {
+                      void saveReview();
+                    }}
                     disabled={
                       loading
                     }
@@ -1166,7 +1249,7 @@ export default function GameActions({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

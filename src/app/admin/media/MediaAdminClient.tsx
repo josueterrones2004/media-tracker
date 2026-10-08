@@ -17,6 +17,8 @@ import Link from "next/link";
 import {
   type ChangeEvent,
   type FormEvent,
+  useCallback,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -31,15 +33,27 @@ type MediaType =
   | "game"
   | "book";
 
-type SearchResult = {
+export type MediaAdminInitialSelection = {
   key: string;
   title: string;
   kind: MediaType;
-  image: string | null;
-  year: number | null;
+
+  image:
+    | string
+    | null;
+
+  year:
+    | number
+    | null;
+
   href: string;
-  subtitle?: string;
+
+  subtitle?:
+    string;
 };
+
+type SearchResult =
+  MediaAdminInitialSelection;
 
 type AssetOption = {
   url: string;
@@ -49,31 +63,61 @@ type AssetOption = {
     | "backdrop";
 
   label: string;
-  width?: number;
-  height?: number;
+
+  width?:
+    number;
+
+  height?:
+    number;
 };
 
 type ApiOverride = {
-  poster_url: string | null;
-  backdrop_url: string | null;
+  poster_url:
+    | string
+    | null;
 
-  poster_position_x: number;
-  poster_position_y: number;
-  poster_zoom: number;
+  backdrop_url:
+    | string
+    | null;
 
-  backdrop_position_x: number;
-  backdrop_position_y: number;
-  backdrop_zoom: number;
+  poster_position_x:
+    number;
+
+  poster_position_y:
+    number;
+
+  poster_zoom:
+    number;
+
+  backdrop_position_x:
+    number;
+
+  backdrop_position_y:
+    number;
+
+  backdrop_zoom:
+    number;
 };
 
 type AssetResponse = {
-  automaticPoster: string | null;
-  automaticBackdrop: string | null;
+  automaticPoster:
+    | string
+    | null;
 
-  currentPoster?: string | null;
-  currentBackdrop?: string | null;
+  automaticBackdrop:
+    | string
+    | null;
 
-  assets: AssetOption[];
+  currentPoster?:
+    | string
+    | null;
+
+  currentBackdrop?:
+    | string
+    | null;
+
+  assets:
+    AssetOption[];
 
   override:
     | ApiOverride
@@ -93,16 +137,24 @@ const ACCEPTED_TYPES =
   ]);
 
 function getExternalId(
-  result: SearchResult
+  result:
+    SearchResult
 ) {
   return result.key
-    .split(":")
-    .slice(1)
-    .join(":");
+    .split(
+      ":"
+    )
+    .slice(
+      1
+    )
+    .join(
+      ":"
+    );
 }
 
 function getExtension(
-  file: File
+  file:
+    File
 ) {
   if (
     file.type ===
@@ -122,7 +174,8 @@ function getExtension(
 }
 
 function getKindLabel(
-  kind: MediaType
+  kind:
+    MediaType
 ) {
   if (
     kind ===
@@ -148,7 +201,13 @@ function getKindLabel(
   return "Libro";
 }
 
-export default function MediaAdminClient() {
+export default function MediaAdminClient({
+  initialSelection = null,
+}: {
+  initialSelection?:
+    MediaAdminInitialSelection |
+    null;
+}) {
   const [
     supabase,
   ] =
@@ -165,6 +224,11 @@ export default function MediaAdminClient() {
   const posterInputRef =
     useRef<HTMLInputElement>(
       null
+    );
+
+  const initialSelectionLoaded =
+    useRef(
+      false
     );
 
   const [
@@ -392,7 +456,8 @@ export default function MediaAdminClient() {
    */
 
   async function searchMedia(
-    event: FormEvent
+    event:
+      FormEvent
   ) {
     event.preventDefault();
 
@@ -513,157 +578,205 @@ export default function MediaAdminClient() {
    * SELECT
    */
 
-  async function chooseResult(
-    result: SearchResult
-  ) {
-    setSelected(
-      result
-    );
+  const chooseResult =
+    useCallback(
+      async (
+        result:
+          SearchResult
+      ) => {
+        setSelected(
+          result
+        );
 
-    setLoadingMedia(
-      true
-    );
+        setLoadingMedia(
+          true
+        );
 
-    setMessage(
-      ""
-    );
+        setMessage(
+          ""
+        );
 
-    setAssets(
+        setAssets(
+          []
+        );
+
+        const externalId =
+          getExternalId(
+            result
+          );
+
+        try {
+          const response =
+            await fetch(
+              `/api/admin/media-assets?kind=${result.kind}&id=${encodeURIComponent(
+                externalId
+              )}`,
+              {
+                cache:
+                  "no-store",
+              }
+            );
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              `HTTP ${response.status}`
+            );
+          }
+
+          const data =
+            (
+              await response.json()
+            ) as AssetResponse;
+
+          setAssets(
+            data.assets ??
+            []
+          );
+
+          setAutomaticBackdrop(
+            data.automaticBackdrop ??
+            null
+          );
+
+          setAutomaticPoster(
+            data.automaticPoster ??
+            null
+          );
+
+          /*
+           * Cargamos exactamente el override
+           * que actualmente utiliza la app.
+           */
+
+          setBackdropUrl(
+            data.override
+              ?.backdrop_url ??
+            null
+          );
+
+          setPosterUrl(
+            data.override
+              ?.poster_url ??
+            null
+          );
+
+          setBackdropPositionX(
+            Number(
+              data.override
+                ?.backdrop_position_x ??
+              50
+            )
+          );
+
+          setBackdropPositionY(
+            Number(
+              data.override
+                ?.backdrop_position_y ??
+              50
+            )
+          );
+
+          setBackdropZoom(
+            Number(
+              data.override
+                ?.backdrop_zoom ??
+              1
+            )
+          );
+
+          setPosterPositionX(
+            Number(
+              data.override
+                ?.poster_position_x ??
+              50
+            )
+          );
+
+          setPosterPositionY(
+            Number(
+              data.override
+                ?.poster_position_y ??
+              50
+            )
+          );
+
+          setPosterZoom(
+            Number(
+              data.override
+                ?.poster_zoom ??
+              1
+            )
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            error
+          );
+
+          setMessage(
+            "No se pudieron cargar las imágenes."
+          );
+        } finally {
+          setLoadingMedia(
+            false
+          );
+        }
+      },
       []
     );
 
-    const externalId =
-      getExternalId(
-        result
-      );
+  /*
+   * Si llegamos desde el botón DEV de una ficha,
+   * abrimos directamente ese medio.
+   */
 
-    try {
-      const response =
-        await fetch(
-          `/api/admin/media-assets?kind=${result.kind}&id=${encodeURIComponent(
-            externalId
-          )}`,
-          {
-            cache:
-              "no-store",
-          }
-        );
-
+  useEffect(
+    () => {
       if (
-        !response.ok
+        !initialSelection ||
+        initialSelectionLoaded.current
       ) {
-        throw new Error(
-          `HTTP ${response.status}`
-        );
+        return;
       }
 
-      const data =
-        (
-          await response.json()
-        ) as AssetResponse;
+      initialSelectionLoaded.current =
+        true;
 
-      setAssets(
-        data.assets ??
-        []
-      );
+      const timeout =
+        window.setTimeout(
+          () => {
+            setQuery(
+              initialSelection.title
+            );
 
-      setAutomaticBackdrop(
-        data.automaticBackdrop ??
-        null
-      );
+            void chooseResult(
+              initialSelection
+            );
+          },
+          0
+        );
 
-      setAutomaticPoster(
-        data.automaticPoster ??
-        null
-      );
-
-      /*
-       * Cargamos exactamente el override
-       * que actualmente utiliza la app.
-       */
-
-      setBackdropUrl(
-        data.override
-          ?.backdrop_url ??
-        null
-      );
-
-      setPosterUrl(
-        data.override
-          ?.poster_url ??
-        null
-      );
-
-      setBackdropPositionX(
-        Number(
-          data.override
-            ?.backdrop_position_x ??
-          50
-        )
-      );
-
-      setBackdropPositionY(
-        Number(
-          data.override
-            ?.backdrop_position_y ??
-          50
-        )
-      );
-
-      setBackdropZoom(
-        Number(
-          data.override
-            ?.backdrop_zoom ??
-          1
-        )
-      );
-
-      setPosterPositionX(
-        Number(
-          data.override
-            ?.poster_position_x ??
-          50
-        )
-      );
-
-      setPosterPositionY(
-        Number(
-          data.override
-            ?.poster_position_y ??
-          50
-        )
-      );
-
-      setPosterZoom(
-        Number(
-          data.override
-            ?.poster_zoom ??
-          1
-        )
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        error
-      );
-
-      setMessage(
-        "No se pudieron cargar las imágenes."
-      );
-    } finally {
-      setLoadingMedia(
-        false
-      );
-    }
-  }
+      return () =>
+        window.clearTimeout(
+          timeout
+        );
+    },
+    [
+      initialSelection,
+      chooseResult,
+    ]
+  );
 
   /*
    * UPLOAD
    */
 
   async function uploadImage(
-    file: File,
+    file:
+      File,
 
     type:
       | "backdrop"
@@ -822,7 +935,9 @@ export default function MediaAdminClient() {
       | "poster"
   ) {
     const file =
-      event.target.files?.[0];
+      event.target.files?.[
+        0
+      ];
 
     event.target.value =
       "";
